@@ -23,6 +23,8 @@ class Cluster:
 		self.usable_capacity = 0
 		self.messages = []
 	
+	def initialise(self):
+		
 		self.defineNodes()
 
 		self.defineBricks()
@@ -30,7 +32,6 @@ class Cluster:
 		self.defineVolumes()
 		
 		print "Analysis complete"+" "*20
-
 
 	def defineVolumes(self):
 		vol_list = os.listdir('/var/lib/glusterd/vols')
@@ -44,8 +45,6 @@ class Cluster:
 			if vol.status == 1:
 				vol.update()	# apply vol status info to meta data
 				vol.calcState()	# assess status of the volume
-
-
 
 	def defineNodes(self):
 		sys.stdout.write("Processing nodes"+" "*20+"\n\r\x1b[A")
@@ -70,12 +69,10 @@ class Cluster:
 						node_info['connected'])
 				self.node[node_info['hostname']] = new_node
 
-
 	def getVersion(self):
 		(rc, versInfo) = issueCMD("gluster --version")
 		return versInfo[0].split()[1]
 		
-
 	def defineBricks(self):
 		sys.stdout.write("Processing Bricks"+" "*20+"\n\r\x1b[A")
 
