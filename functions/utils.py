@@ -1,31 +1,30 @@
 #!/usr/bin/env python
-def displayBytes(inBytes):
+def displayBytes(inBytes, kb_is_1024_bytes=True):
 	"""
 	Routine to convert a given number of bytes into a more human readable form
+	
+	- Based on code in Mark Pilgrim's Dive Into Python book
 	
 	Input  : number of bytes
 	Output : returns a MB / GB / TB value for bytes
 	
 	"""
+
+	SUFFIXES = {1000: ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+				1024: ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']}
+
 	
-	
-	bytes = float(inBytes)
-	if bytes >= 1125899906842624:
-		size = round(bytes / 1125899906842624)
-		#displayBytes = '%.1fP' % size
-		displayBytes = '%dP' % size
-	elif bytes >= 1099511627776:
-		size = round(bytes / 1099511627776)
-		displayBytes = '%dT' % size
-	elif bytes >= 1073741824:
-		size = round(bytes / 1073741824)
-		displayBytes = '%dG' % size 
-	elif bytes >= 1048576:
-		size = int(round(bytes / 1048576))
-		displayBytes = '%dM' % size
-	elif bytes >= 1024:
-		size = int(round(bytes / 1024))
-		displayBytes = '%dK' % size 
-	else:
-		displayBytes = '%db' % bytes 
-	return displayBytes
+
+	size = float(inBytes)
+
+	if size < 0:
+		raise ValueError('number must be non-negative')
+
+	divisor = 1024 if kb_is_1024_bytes else 1000
+	for suffix in SUFFIXES[divisor]:
+		size /= divisor
+		if size < divisor:
+			return '{0:.2f} {1}'.format(size, suffix)
+
+	raise ValueError('number too large')
+
