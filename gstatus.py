@@ -3,7 +3,7 @@
 #
 #  gstatus.py
 #  
-#  Copyright 2014 Paul <paul@rhlaptop>
+#  Copyright 2014 Paul Cuzner 
 #  
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -33,6 +33,8 @@ from classes.gluster	import Cluster, Volume, Brick
 # complete and ends up blocking on the originating node until the node timeout occurs.
 
 def main():
+
+	cluster.initialise()
 
 	active_nodes = cluster.checkNodes()
 	active_bricks = cluster.checkBricks()
