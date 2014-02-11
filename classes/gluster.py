@@ -1,4 +1,21 @@
 #!/usr/bin/env python
+#
+#	gluster.py - module that defines the gluster objects used by gstatus
+#
+#   Copyright (C) 2014 Paul Cuzner
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 
 import 	os
 import 	sys
@@ -10,7 +27,7 @@ from 	functions.syscalls	import 	issueCMD
 
 
 class Cluster:
-
+	""" The cluster class is the parent of nodes, bricks and volumes """
 
 	def __init__(self):
 		self.glfs_version = ''	# version, or mixed
@@ -24,6 +41,7 @@ class Cluster:
 		self.messages = []
 	
 	def initialise(self):
+		""" call the node, brick and volume 'generator' to create the child objects """
 		
 		self.defineNodes()
 
@@ -34,6 +52,8 @@ class Cluster:
 		print "Analysis complete"+" "*20
 
 	def defineVolumes(self):
+		""" Create the volume objects """
+		
 		vol_list = os.listdir('/var/lib/glusterd/vols')
 
 		for volume in vol_list:
@@ -41,12 +61,17 @@ class Cluster:
 			self.volume[volume] = vol
 
 			sys.stdout.write("Processing volume %s\n\r\x1b[A"%(volume))
+			
+			# first populate the high level info from the output of a 
+			# volinfo query
 			vol.populate(self.brick)
 			if vol.status == 1:
-				vol.update()	# apply vol status info to meta data
+				vol.update()	# apply vol status detail information to meta data
 				vol.calcState()	# assess status of the volume
 
 	def defineNodes(self):
+		""" Define the nodes, by looking at 'gluster pool list' output """
+		
 		sys.stdout.write("Processing nodes"+" "*20+"\n\r\x1b[A")
 	
 		# define the fields that we're interested in 
@@ -70,10 +95,14 @@ class Cluster:
 				self.node[node_info['hostname']] = new_node
 
 	def getVersion(self):
+		""" return the version of gluster """
 		(rc, versInfo) = issueCMD("gluster --version")
 		return versInfo[0].split()[1]
 		
 	def defineBricks(self):
+		""" Populate brick objects based on 'gluster vol info', and link them back
+			to parent object(s) """
+			
 		sys.stdout.write("Processing Bricks"+" "*20+"\n\r\x1b[A")
 
 		(rc, vol_info) = issueCMD("gluster vol info --xml")
@@ -94,7 +123,7 @@ class Cluster:
 				brick_owner.brick[brick_path] = new_brick
 
 	def numVolumes(self):
-        	return len(self.volume)
+	        return len(self.volume)
 
 	def numNodes(self):
 		return len(self.node)
@@ -103,6 +132,7 @@ class Cluster:
 		return len(self.brick)
 
 	def checkNodes(self):
+		""" Count no. of nodes in an up state """
 		ctr = 0
 		for hostname in self.node:
 			if self.node[hostname].state == '1':
@@ -112,6 +142,7 @@ class Cluster:
 		return ctr
 
 	def checkBricks(self):
+		""" return the number of bricks in an up state """
 		ctr = 0
 		for brick_name in self.brick:
 			if self.brick[brick_name].online:
@@ -128,6 +159,8 @@ class Cluster:
 
 
 	def checkVolumes(self):
+		""" return the number of volumes in an up state """
+		
 		ctr = 0 
 
 		for vol_name in self.volume:
@@ -136,7 +169,8 @@ class Cluster:
 		return ctr
 
 class Node:
-
+	""" Node object, just used as a container as a parent for bricks """
+	
 	node_state = { '0':'disconnected', '1':'connected'}
 
 	def __init__(self,node,uuid,state):
@@ -151,7 +185,9 @@ class Node:
 	
 
 class Volume:
-
+	""" Volume object, linking out to the bricks, and holding the description
+		of the volume's attributes """
+		
 	# Vol states are 
 	#	ready		... defined, but not started
 	# 	online		... all bricks online, operational
@@ -182,7 +218,8 @@ class Volume:
 
 
 	def populate(self, cluster_brick):
-
+		""" run vol info to create a volume object """
+		
 		(rc, vol_info) = issueCMD("gluster vol info %s --xml"%(self.name))
 		
 		xml_stream = ''.join(vol_info)
@@ -329,12 +366,17 @@ class Volume:
 
 
 	def pctUsed(self):
+		""" PLACEHOLDER """
 		pass
 	
 	def numBricks(self):
+		""" return the number of bricks in the volume """
+		
 		return len(self.brick)
 
 	def brickStates(self):
+		""" return a tupe of online bricks and total bricks for this volume """
+		
 		all_bricks = len(self.brick)
 		online_bricks = 0
 		for brick_path in self.brick:
@@ -343,7 +385,9 @@ class Volume:
 		return (online_bricks, all_bricks)
 
 class Brick:
-	
+	""" Brick object populated initially through vol info, and then updated
+		with data from a vol status <bla> detail command """
+		
 	def __init__(self, brick_path):
 		self.brick_path = brick_path
 		self.node = brick_path.split(':')[0] 
@@ -357,6 +401,8 @@ class Brick:
 		self.used = 0
 
 	def update(self,state, size, free, fsname, device, mnt_options):
+		""" apply attributes to this brick """
+		
 		self.online = state
 		self.size=size	#KB to convert to GB
 		self.free=free
@@ -377,6 +423,8 @@ class Brick:
 				self.mount_options[opt] = True
 
 def getAttr(element,match_list):
+	""" function to convert an xml node element with attributes, to a dict """
+	
 	attr_list = {}
 	for node in element.getchildren():
 		if node.tag in match_list:

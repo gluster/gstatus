@@ -78,9 +78,9 @@ if __name__ == '__main__':
 	
 	parser = OptionParser(usage=usageInfo,version="%prog 0.1")
 	parser.add_option("-s","--status",dest="status",action="store_true",default=True,help="Show highlevel health of the cluster")
-	parser.add_option("-v","--volume",dest="volumes", help="Volume level view")
+	parser.add_option("-v","--volume",dest="volumes", help="Volume level view (NOT IMPLEMENTED YET!)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="Show all cluster information")
-	parser.add_option("--xml",dest="xml",action="store_true",default=False,help="produce output in XML format (FUTURE)")
+	parser.add_option("--xml",dest="xml",action="store_true",default=False,help="produce output in XML format (NOT IMPLEMENTED YET!)")
 	(options, args) = parser.parse_args()
 
 	status_request = options.status

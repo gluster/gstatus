@@ -1,0 +1,26 @@
+
+To Do List / Change Log
+
+0.1 (09 Feb 2014) - Initial Commit
+  - Show cluster summary state - nodes, volumes and brick up/down state
+  - show summary information per volume - brick up/down count, volume type, 
+    volume status and usable capacity summary
+  - show errors discovered in summary list at the end of the output
+
+0.2 Planned
+  - align volume state text with nagios monitoring project
+
+
+Items being considered
+- from the vol status X detail output
+  - record and show the nfs daemon states across the nodes 
+  - record and show the self-heal states across the nodes
+
+
+Known BUGS
+- invocation after a node down event will block vol status. This needs to be 
+  detected and the run aborted to prevent the wrong information being shown to
+  the user
+
+
+

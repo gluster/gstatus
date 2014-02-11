@@ -1,0 +1,81 @@
+
+Overview
+========
+A gluster trusted pool (aka cluster), consists of several key components; nodes, volumes and bricks.At this point (version 3.4/3.5), there isn't a single command that can provide an overview of the cluster's health. This means that admins currently assess the cluster by looking at several commands to piece together a picture of the cluster's state.
+
+This isn't ideal - so gstatus is an attempt to provide an easy to use, highlevel view of a clusters health through a single command. The tools gathers information by issuing gluster commands, to build an object model covering Nodes, Volumes and Bricks. With this data in place, checks are performed across this meta data and errors reported back to the user. In later releases, this data can be analysed in different ways to add further checks, incorporating deployment best practices etc.
+
+Pre-Requisites
+- glusterfs 3.4 or above
+  The tool issues commands to gluster using the --xml parameter. Scraping the output is another possibility, but by using the xml the code should be more stable and more easily extendable
+  
+- volume types
+  the initial release of gstatus support distributed and distributed-replicated volumes ONLY
+
+Volume States
+=============
+A gluster volume is made from individual filesystems (gluster bricks) across multiple nodes. From an end/user of application perspective, this complexity is abstracted but the status of individual bricks does have a bearing on the data availability of the volume. For example, even without replication the loss of a single brick in the volume will not cause the volume itself to be unavilable, but instead manifest as inaccessible files in the filesystem. 
+To make more sense of the impact the brick availability has to the volume presented to the application, the gstatus command introduces shome additional status descriptions, that define the volumes state in terms of data availability.
+
+ONLINE
+Volume is started and available, all bricks are online 
+
+ONLINE_DEGRADED
+This state is specific to replicated volumes, where at least one brick is down within a replica set. Access can continue, but the resilience of the volume, and potentially it’s performance is degraded. 
+
+ONLINE_PARTIAL
+ Effectively this means that allthough some bricks in the volume are online, there are others that are down to a point where areas of the filesystem will be missing. For a distrubuted volume, this state is seen if any brick is offline, whereas for a replicated volume a complete replica set needs to be down. 
+
+OFFLINE
+Bricks are down, or unavailable 
+
+STOPPED
+Admin has stopped the volume 
+
+
+Dependencies
+============
+- python 2.6 or above
+- gluster CLI
+- gluster version 3.4 or above
+
+
+
+Installation
+============
+At this stage the code is available as a simple tar archive. To install the tool on your cluster follow these steps
+1. Grab the tar archive from the gluster forge (https://forge.gluster.org/gstatus)
+2. unpack the archive on one of the nodes (or all!) within your cluster
+   tar -xvzf <archive name>
+3. switch to the directory where you unpacked the archive, and run the gstatus.py script
+
+Running the tool
+================
+Running gstatus with a -h flag shows the following options;
+
+./gstatus.py -h
+Usage: gstatus.py [options]
+
+Options:
+  --version             show program's version number and exit
+  -h, --help            show this help message and exit
+  -s, --status          Show highlevel health of the cluster
+  -v VOLUMES, --volume=VOLUMES
+                        Volume level view (NOT IMPLEMENTED YET!)
+  -a, --all             Show all cluster information
+  --xml                 produce output in XML format (NOT IMPLEMENTED YET!)
+
+
+Tested on
+=========
+- 4 node vm cluster, running Red Hat Storage 2.1 (RHEL 6.4, glusterfs 3.4)
+
+
+Known Issues
+============
+1) invocation after a node down event will block vol status. This needs to be 
+   detected and the run aborted to prevent the wrong information being shown to
+   the user
+
+
+ 
