@@ -148,12 +148,7 @@ class Cluster:
 			if self.brick[brick_name].online:
 				ctr +=1
 			else:
-				# get hostname for the allegedly down brick
-				hostname = brick_name.split(':')[0]
-				
-				# if peer is down, flag the brick as down
-				if self.node[hostname].state_text == 'disconnected':
-					self.messages.append("Brick %s is down/unavailable"%(brick_name))
+				self.messages.append("Brick %s is down/unavailable"%(brick_name))
 
 		return ctr
 
