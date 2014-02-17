@@ -53,7 +53,7 @@ def main():
 		for vol_name in cluster.volume:
 			vol = cluster.volume[vol_name]
 			(up,all) = vol.brickStates()
-			print ("\t%s %s (%d/%d bricks online) - %s"
+			print ("\t%s %s - %d/%d bricks up - %s"
 				%(vol_name.ljust(16,' '), 
 				vol.volume_state.upper(),
 				up,all,

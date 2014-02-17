@@ -145,7 +145,7 @@ class Cluster:
 		""" return the number of bricks in an up state """
 		ctr = 0
 		for brick_name in self.brick:
-			if self.brick[brick_name].online:
+			if self.brick[brick_name].up:
 				ctr +=1
 			else:
 				self.messages.append("Brick %s is down/unavailable"%(brick_name))
@@ -159,7 +159,7 @@ class Cluster:
 		ctr = 0 
 
 		for vol_name in self.volume:
-			if self.volume[vol_name].volume_state == 'online':
+			if self.volume[vol_name].volume_state == 'up':
 				ctr += 1
 		return ctr
 
@@ -185,18 +185,18 @@ class Volume:
 		
 	# Vol states are 
 	#	ready		... defined, but not started
-	# 	online		... all bricks online, operational
-	# 	online-partial	... one or more bricks offline, but replica in place
-	# 	online-degraded ... at least one replica set is offline
-	# 	offline		... volume is down/stopped
+	# 	up		... all bricks online, operational
+	# 	up(partial)	... one or more bricks offline, but replica in place
+	# 	up(degraded) ... at least one replica set is offline
+	# 	down		... volume is down/stopped
 
-	volume_states = ['ready','online', 'stopped','online-partial', 'online-degraded']
+	volume_states = ['ready','up', 'down','up(partial)', 'up(degraded)']
 
 	def __init__(self,vol_name):
 		self.name = vol_name
 		self.type = 0  		# 5=dist-repl
 		self.type_string = ''
-		self.volume_state = 'stopped'
+		self.volume_state = 'down'
 		self.brick = {}
 		self.brick_total = 0
 		self.replica_set=[]	   # list, where each item is a tuple, of brick objects
@@ -278,7 +278,7 @@ class Volume:
 				state = 0		# initial state is 0 = all good
 
 				for brick_path in set:
-					if not self.brick[brick_path].online:
+					if not self.brick[brick_path].up:
 						state += 1
 				set_state.append(state)
 
@@ -288,24 +288,24 @@ class Volume:
 			# check if we have a problem
 			if worst_set > 0:
 				if worst_set == self.replica_count:
-					self.volume_state += "_partial"
+					self.volume_state += "(partial)"
 				else:
-					self.volume_state += "_degraded"
+					self.volume_state += "(degraded)"
 		
 		else:
 			# this volume is not replicated, so brick disruption leads
-			# to an _partial state
+			# to an 'partial' state
 			total = self.numBricks()
 			down = 0
 			for brick_path in self.brick:
-				if self.brick[brick_path].online:
+				if self.brick[brick_path].up:
 					continue
 				else:
 					down += 1
 			if down == total:
-				self.volume_state = 'offline'
+				self.volume_state = 'down'
 			elif down > 0:
-				self.volume_state += '_partial'
+				self.volume_state += '(partial)'
 
 
 					
@@ -350,7 +350,7 @@ class Volume:
 			if self.replica_count > 1:
 				for set in self.replica_set:
 					for brick_path in set:
-						if self.brick[brick_path].online:
+						if self.brick[brick_path].up:
 							self.usable_capacity += self.brick[brick_path].size
 							self.used_capacity += self.brick[brick_path].used
 							break
@@ -375,7 +375,7 @@ class Volume:
 		all_bricks = len(self.brick)
 		online_bricks = 0
 		for brick_path in self.brick:
-			if self.brick[brick_path].online:
+			if self.brick[brick_path].up:
 				online_bricks += 1
 		return (online_bricks, all_bricks)
 
@@ -386,7 +386,7 @@ class Brick:
 	def __init__(self, brick_path):
 		self.brick_path = brick_path
 		self.node = brick_path.split(':')[0] 
-		self.online = False 
+		self.up = False 
 		self.mount_options = {}
 		self.fs_type = ''
 		self.device = ''
@@ -398,7 +398,7 @@ class Brick:
 	def update(self,state, size, free, fsname, device, mnt_options):
 		""" apply attributes to this brick """
 		
-		self.online = state
+		self.up = state
 		self.size=size	#KB to convert to GB
 		self.free=free
 		self.used=size-free
