@@ -36,18 +36,27 @@ def main():
 
 	cluster.initialise()
 
+	cluster.updateState()
+
 	active_nodes = cluster.checkNodes()
 	active_bricks = cluster.checkBricks()
 	active_volumes = cluster.checkVolumes()
+	(sh_active, sh_enabled) = cluster.selfHeal()
+	
+	if (sh_active == 0) and (sh_enabled == 0):
+		sh_string = 'N/A'
+	else:
+		sh_string = "%2d/%2d"%(sh_active,sh_enabled)
 
 	if status_request:
 
-		print "\nCluster Summary:"
-		print ("  Version - %s  Nodes - %2d/%2d  Bricks - %2d/%2d  Volumes - %2d/%2d"
+		print "Cluster Summary:".ljust(50)
+		print ("  Version - %s  Nodes - %2d/%2d  Bricks - %2d/%2d  Volumes - %2d/%2d  Self-Heal - %s"
 			%(cluster.glfs_version,
 			active_nodes,cluster.numNodes(),
 			active_bricks,cluster.numBricks(),
-			active_volumes,cluster.numVolumes()))
+			active_volumes,cluster.numVolumes(),
+			sh_string))
 
 		print "\nVolume Summary"
 		for vol_name in cluster.volume:
@@ -57,7 +66,7 @@ def main():
 				%(vol_name.ljust(16,' '), 
 				vol.volume_state.upper(),
 				up,all,
-				vol.type_string))
+				vol.typeStr))
 			print ("\t" + " "*17 + "Capacity: %s/%s (used,total)"
 				%(displayBytes(vol.used_capacity),
 				displayBytes(vol.usable_capacity)))
@@ -93,7 +102,6 @@ if __name__ == '__main__':
 	# Create a cluster object. This will init the cluster with the current
 	# node,volume and brick counts
 	cluster = Cluster()
-	cluster_messages = []
 	
 	main()
 
