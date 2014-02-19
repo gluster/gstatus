@@ -41,22 +41,17 @@ def main():
 	active_nodes = cluster.checkNodes()
 	active_bricks = cluster.checkBricks()
 	active_volumes = cluster.checkVolumes()
-	(sh_active, sh_enabled) = cluster.selfHeal()
+	active_self_heal = cluster.checkSelfHeal()
 	
-	if (sh_active == 0) and (sh_enabled == 0):
-		sh_string = 'N/A'
-	else:
-		sh_string = "%2d/%2d"%(sh_active,sh_enabled)
-
 	if status_request:
 
 		print "Cluster Summary:".ljust(50)
-		print ("  Version - %s  Nodes - %2d/%2d  Bricks - %2d/%2d  Volumes - %2d/%2d  Self-Heal - %s"
+		print ("  Version - %s  Nodes - %2d/%2d  Bricks - %2d/%2d  Volumes - %2d/%2d  Self-Heal - %2d/%2d"
 			%(cluster.glfs_version,
 			active_nodes,cluster.numNodes(),
 			active_bricks,cluster.numBricks(),
 			active_volumes,cluster.numVolumes(),
-			sh_string))
+			active_self_heal,cluster.numSelfHeal()))
 
 		print "\nVolume Summary"
 		for vol_name in cluster.volume:
@@ -70,6 +65,7 @@ def main():
 			print ("\t" + " "*17 + "Capacity: %s/%s (used,total)"
 				%(displayBytes(vol.used_capacity),
 				displayBytes(vol.usable_capacity)))
+			print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string)
 
 	print "\nStatus Messages"
 	if cluster.messages:

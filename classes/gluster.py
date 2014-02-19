@@ -48,14 +48,10 @@ from 	functions.syscalls	import 	issueCMD
 #
 #
 #
-#
-
-
-
 
 
 class Cluster:
-	""" The cluster class is the parent of nodes, bricks and volumes """
+	""" The cluster object is the parent of nodes, bricks and volumes """
 
 	def __init__(self):
 		self.glfs_version = ''	# version, or mixed
@@ -77,8 +73,6 @@ class Cluster:
 		self.defineNodes()
 
 		self.defineVolumes()
-		
-		#print "Analysis complete"+" "*20
 
 
 	def defineNodes(self):
@@ -101,7 +95,9 @@ class Cluster:
 		
 		# define the fields that we're interested in 
 		field_list = ['hostname','uuid','connected']
-
+		
+		# Issue the command to get the list of peers in the cluster
+		# and set up the node objects
 		(rc, peer_list) = issueCMD('gluster peer status --xml')
 		if rc == 0:
 			xml_string = ''.join(peer_list)
@@ -163,7 +159,7 @@ class Cluster:
 				
 				brick_path = brick.text
 				(hostname,pathname) = brick_path.split(':')
-				new_brick = Brick(brick_path)
+				new_brick = Brick(brick_path, self.node[hostname])
 
 				# Add the brick to the cluster and volume
 				self.brick[brick_path] = new_brick
@@ -184,6 +180,30 @@ class Cluster:
 						# drop all elements from temporary list
 						repl =[]
 
+			# By default from gluster 3.3 onwards, self heal is enabled for 
+			# all replicated volumes. We look at the volume type, and if it 
+			# is replicated and hasn't has self-heal explicitly disabled the
+			# self heal state is inferred against the nodes that contain the 
+			# bricks for the volume. With this state in place, the updateState
+			# method can cross check to see what is actually happening
+
+			if 'replicate' in new_volume.typeStr.lower():
+				
+				enable_self_heal = False		# assume it's off
+					
+				if 'cluster.self-heal-daemon' in new_volume.options:
+					if new_volume.options['cluster.self-heal-daemon'].lower() in ['on','true']:
+						enable_self_heal = True
+				else:
+					# replicated volume, without a self-heal-daemon setting - default is ON
+					enable_self_heal = True
+
+				if enable_self_heal:
+					for brick_path in new_volume.brick:
+						(hostname,brick_fsname) = brick_path.split(':')
+						#new_volume.brick[brick_path].self_heal_enabled = True
+						self.node[hostname].self_heal_enabled = True
+						
 
 
 	def getVersion(self):
@@ -232,21 +252,30 @@ class Cluster:
 			if self.volume[vol_name].volume_state == 'up':
 				ctr += 1
 		return ctr
+		
+	def checkSelfHeal(self):
+		""" return the number of nodes that have self-heal active """
+		ctr = 0
+		for node_name in self.node:
+			if self.node[node_name].self_heal_active:
+				ctr += 1
+				
+		return ctr
 
-	def selfHeal(self):
-		""" determine whether self heal is running in the cluster """
-		
-		active = 0 
-		enabled = 0
-		
-	
-		return (active,enabled)
+	def numSelfHeal(self):
+		""" return the number of nodes with self heal enabled """
+		ctr = 0
+		for node_name in self.node:
+			if self.node[node_name].self_heal_enabled:
+				ctr += 1
+				
+		return ctr
 
 	def updateState(self):
 		""" update the state of the cluster by processing the output of 'vol status' commands
 		
 			- vol status all detail --> provides the brick info (up/down, type), plus volume capacity
-			- vol status all --> brick up/down state and self heal pid's 
+			- vol status all --> self heal states 
 		
 		"""
 		
@@ -283,8 +312,31 @@ class Cluster:
 		xml_string = ''.join(vol_status)
 		xml_root = ETree.fromstring(xml_string)
 		
+		self_heal_list = []
 		
+		node_elements = xml_root.findall('.//node')
+		
+		# first get a list of self-heal elements from the xml
+		for node in node_elements:
+			if node.find('./hostname').text == 'Self-heal Daemon':
+				self_heal_list.append(node)
+				
+		# Process the list, updating the node's self-heal state
+		for sh_node in self_heal_list:
+			node_name = sh_node.find('./path').text
+			node_state = sh_node.find('./status').text
+			
+			node_name = os.environ['HOSTNAME'].split('.')[0] if node_name == 'localhost' else node_name
 
+			if node_state == '1':
+				self.node[node_name].self_heal_active = True
+			else:
+				self.node[node_name].self_heal_active = False
+		
+		# Propagate the self heal states to the clusters volume(s)
+		for vol_name in self.volume:
+			this_vol = self.volume[vol_name]
+			this_vol.updateSelfHeal()
 
 class Node:
 	""" Node object, just used as a container as a parent for bricks """
@@ -344,8 +396,11 @@ class Volume:
 		self.raw_used = 0
 		self.usable_capacity = 0
 		self.used_capacity = 0
-		self.nfs_enabled = False
+		self.nfs_enabled = True
 		self.self_heal_enabled = False
+		self.self_heal_string = ''
+
+		
 		
 
 	def update(self, volume_xml):
@@ -477,13 +532,48 @@ class Volume:
 				online_bricks += 1
 		return (online_bricks, all_bricks)
 
+	def updateSelfHeal(self):
+		""" Updates the state of self heal for this volume """
+		
+		# first check if this volume is a replicated volume, if not
+		# set the state string to "not applicable"
+		if 'replicate' not in self.typeStr.lower():
+			self.self_heal_string = 'N/A'
+			
+		# so it's replicated, but is self-heal disabled?	
+		elif 'cluster.self-heal-daemon' in self.options:
+			if self.options['cluster.self-heal-daemon'].lower() in ['off','false']:
+				self.self_heal_string = 'DISABLED'
+			else:
+				self.self_heal_string = self.calcSelfHealStr()
+		else:
+			self.self_heal_string = self.calcSelfHealStr()
+			
+	def calcSelfHealStr(self):
+		""" return a string active/enable self heal states for the
+			nodes that support this volume """
+			
+		enabled = 0
+		active = 0 	
+		
+		for brick_path in self.brick:
+			this_brick = self.brick[brick_path]
+			
+			if this_brick.node.self_heal_enabled:
+				enabled += 1
+			if this_brick.node.self_heal_active:
+				active += 1
+			
+		return "%2d/%2d"%(active, enabled)
+
 class Brick:
 	""" Brick object populated initially through vol info, and then updated
 		with data from a vol status <bla> detail command """
 		
-	def __init__(self, brick_path):
+	def __init__(self, brick_path, node_instance):
 		self.brick_path = brick_path
-		self.node = brick_path.split(':')[0] 
+		self.node = node_instance
+		self.node_name = brick_path.split(':')[0] 
 		self.up = False 
 		self.mount_options = {}
 		self.fs_type = ''
@@ -492,6 +582,7 @@ class Brick:
 		self.size = 0
 		self.free = 0 
 		self.used = 0
+		#self.self_heal_enabled = False	# default to off
 
 	def update(self,state, size, free, fsname, device, mnt_options):
 		""" apply attributes to this brick """
