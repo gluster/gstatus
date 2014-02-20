@@ -65,7 +65,7 @@ def main():
 			print ("\t" + " "*17 + "Capacity: %s/%s (used,total)"
 				%(displayBytes(vol.used_capacity),
 				displayBytes(vol.usable_capacity)))
-			print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string)
+			print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string))
 
 	print "\nStatus Messages"
 	if cluster.messages:
