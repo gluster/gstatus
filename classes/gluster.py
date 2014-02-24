@@ -213,7 +213,7 @@ class Cluster:
 		
 
 	def numVolumes(self):
-	        return len(self.volume)
+			return len(self.volume)
 
 	def numNodes(self):
 		return len(self.node)
@@ -316,8 +316,21 @@ class Cluster:
 		
 		node_elements = xml_root.findall('.//node')
 		
+		# there's a big in 3.4, where when a node is missing the xml get malformed
+		# with a node within a node (the upper level nodes represents the missing
+		# node slot I assume!)
+		
+		# To address, we look for the problem and work around it!
+		for node in node_elements:
+			
+			if node.find('./node'):
+				# reset the node elements to this inner level
+				node_elements = node.findall('.//node')
+				break
+		
 		# first get a list of self-heal elements from the xml
 		for node in node_elements:
+				
 			if node.find('./hostname').text == 'Self-heal Daemon':
 				self_heal_list.append(node)
 				
@@ -408,7 +421,7 @@ class Volume:
 			each element updating the volume info and associated 
 			brick information/state
 		"""
-		    
+			
 		# Node elements correspond to a brick associated with this volume
 		# so we first process the node elements to determine brick state
 		for node in volume_xml.findall('.//node'):
