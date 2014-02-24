@@ -73,9 +73,6 @@ class Cluster:
 		#		a node is down
 		#		a volume is in partial state (multiple bricks down)
 		#
-		# recovery
-		#		self heal is operational recovering data
-		#
 		# down
 		#		all nodes in the cluster are down
 								

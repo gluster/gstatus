@@ -7,14 +7,29 @@ To Do List / Change Log
     volume status and usable capacity summary
   - show errors discovered in summary list at the end of the output
 
-0.2 Planned
-  - align volume state text with nagios monitoring project
+0.2 Complete 2014/02/24
+  - align volume state text with nagios monitoring project (DONE)
+  - add self heal status (DONE)
 
+0.3 planned
+  - add check for active self heal task 
+  - add nfs daemon state for the volume
+
+0.4 planned
+  - add volume detail information
+    - vol components, replica set relationships
+  - add brick check to make recommendations on mount point definitions/filesystem 
+
+0.5 planned
+  - add config file support
+    - space usage triggers on volumes 
+    - space usage trigger on bricks
+  - add additional checks to cater for new config file
+
+0.6 planned
+  - address the blocking problem when a node goes down, and the gstatus is invoked 
 
 Items being considered
-- from the vol status X detail output
-  - record and show the nfs daemon states across the nodes 
-  - record and show the self-heal states across the nodes
 
 
 Known BUGS
