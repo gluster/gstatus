@@ -169,6 +169,19 @@ class Cluster:
 					elif n.tag == 'value':
 						value = n.text
 						new_volume.options[key]=value
+						
+						# Protocols are enabled by default, so we look
+						# for the volume tuning options that turn them 
+						# off
+						if key == 'user.cifs':
+							if value in ['disable','off','false']:
+								new_volume.protocol['SMB'] = 'off'
+							
+						elif key == 'nfs.disable':
+							if value in ['on','true']:
+								new_volume.protocol['NFS'] = 'off'
+							
+							
 			
 			# get bricks listed against this volume, and create the Brick object(s)
 			brick_nodes = vol_object.findall('.//brick')
@@ -445,6 +458,7 @@ class Volume:
 		self.nfs_enabled = True
 		self.self_heal_enabled = False
 		self.self_heal_string = ''
+		self.protocol = {'SMB':'yes', 'NFS':'yes','NATIVE':'yes'}
 
 		
 		

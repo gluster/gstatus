@@ -68,6 +68,9 @@ def main():
 				%(displayBytes(vol.used_capacity),
 				displayBytes(vol.usable_capacity)))
 			print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string))
+			print ("\t" + " "*17 + "Enabled Protocols: Native:%s  NFS:%s  SMB:%s"
+				%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
+				
 
 	print "\nStatus Messages"
 	if cluster.messages:
@@ -87,7 +90,7 @@ if __name__ == '__main__':
 	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.1")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.2")
 	parser.add_option("-s","--status",dest="status",action="store_true",default=True,help="Show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", help="Volume level view (NOT IMPLEMENTED YET!)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="Show all cluster information")
