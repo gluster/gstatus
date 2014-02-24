@@ -316,8 +316,8 @@ class Cluster:
 		
 		node_elements = xml_root.findall('.//node')
 		
-		# there's a big in 3.4, where when a node is missing the xml get malformed
-		# with a node within a node (the upper level nodes represents the missing
+		# there's a big in 3.4, where when a node is missing the xml returned is malformed
+		# returning a node within a node (the upper level nodes represents the missing
 		# node slot I assume!)
 		
 		# To address, we look for the problem and work around it!
