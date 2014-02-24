@@ -86,6 +86,12 @@ class Cluster:
 		
 		self.defineNodes()
 
+		# check if this host is active, if not we can't continue.
+		local_node = os.environ['HOSTNAME'].split('.')[0]
+		if self.node[local_node].state != '1':
+			print "gstatus can not contact the local gluster daemon, and can not continue.\n"
+			exit(12)
+
 		self.defineVolumes()
 
 
