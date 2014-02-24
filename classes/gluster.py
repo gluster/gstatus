@@ -23,7 +23,7 @@ import 	re
 import 	xml.etree.ElementTree 	as 	ETree
 
 from 	functions.syscalls	import 	issueCMD
-
+from 	functions.network	import	portOpen
 #
 #
 #  
@@ -57,14 +57,28 @@ class Cluster:
 		self.glfs_version = ''	# version, or mixed
 		self.msgs=[]
 		self.node={}
+		self.nodes_down = 0
 		self.volume={}
 		self.brick={}
 		self.glfs_version = self.getVersion()
 		self.raw_capacity = 0
 		self.usable_capacity = 0
 		self.messages = []
-		self.status = ""		# cluster state should be inherited from
-								# child objects
+		
+		self.status = "healthy"				# be optimistic at first :)	
+		
+		# cluster health is either healthy/recovery/unhealthy or down 
+		#
+		# unhealthy 
+		#		a node is down
+		#		a volume is in partial state (multiple bricks down)
+		#
+		# recovery
+		#		self heal is operational recovering data
+		#
+		# down
+		#		all nodes in the cluster are down
+								
 	
 	def initialise(self):
 		""" call the node, volume 'generator' to create the child objects 
@@ -88,7 +102,9 @@ class Cluster:
 		# grab the uuid for the host the tool is running on
 		uuid = open('/var/lib/glusterd/glusterd.info').readlines()[0].strip()
 		
-		new_node = Node(hostname,uuid,'1')	# assuming local node is actually working!
+		connected = '1' if portOpen('localhost',24007) else '0'
+		
+		new_node = Node(hostname,uuid,connected)	# assuming local node is actually working!
 
 		self.node[hostname] = new_node
 		
@@ -105,6 +121,7 @@ class Cluster:
 
 			peer_list = xml_root.findall('.//peer')
 			for peer in peer_list:
+				
 				node_info = getAttr(peer,field_list)
 
 				new_node = Node(node_info['hostname'],
@@ -112,6 +129,8 @@ class Cluster:
 						node_info['connected'])
 						
 				self.node[node_info['hostname']] = new_node
+		
+		
 
 	def defineVolumes(self):
 		""" Create the volume + brick objects """
@@ -229,6 +248,12 @@ class Cluster:
 				ctr += 1
 			else:
 				self.messages.append("%s is down"%(hostname))
+				self.status = 'unhealthy'
+				
+		# if all the nodes are down - cluster state is Down
+		if ctr == 0:
+			self.status = 'down'
+		
 		return ctr
 
 	def checkBricks(self):
@@ -248,9 +273,15 @@ class Cluster:
 		
 		ctr = 0 
 
-		for vol_name in self.volume:
-			if self.volume[vol_name].volume_state == 'up':
+		for volume_name in self.volume:
+			if self.volume[volume_name].volume_state == 'up':
 				ctr += 1
+				continue
+				
+			# if this volume is down or in a partial state - propagate to the cluster
+			if self.volume[volume_name].volume_state in ['down','up(partial)']:
+				self.status = 'unhealthy'				
+				
 		return ctr
 		
 	def checkSelfHeal(self):
@@ -301,7 +332,6 @@ class Cluster:
 			# Update the volume, to provide capacity and status information
 			self.volume[volume_name].update(vol_object)
 			
-
 		# Now we look at a vol status output, to examine the self-heal states	
 		(rc, vol_status) = issueCMD("gluster vol status --xml")
 		if rc > 0:

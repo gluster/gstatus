@@ -33,6 +33,8 @@ from classes.gluster	import Cluster, Volume, Brick
 # complete and ends up blocking on the originating node until the node timeout occurs.
 
 def main():
+	
+	print " "			# add some spacing to make the output stand out more
 
 	cluster.initialise()
 
@@ -45,7 +47,7 @@ def main():
 	
 	if status_request:
 
-		print "Cluster Summary:".ljust(50)
+		print "Cluster Summary: %s"%(cluster.status).upper().ljust(50)
 		print ("  Version - %s  Nodes - %2d/%2d  Bricks - %2d/%2d  Volumes - %2d/%2d  Self-Heal - %2d/%2d"
 			%(cluster.glfs_version,
 			active_nodes,cluster.numNodes(),
@@ -69,8 +71,12 @@ def main():
 
 	print "\nStatus Messages"
 	if cluster.messages:
+		
+		# Add the current cluster state as the first message to display
+		cluster.messages.insert(0,"Cluster is %s"%(cluster.status.upper()))
 		for info in cluster.messages:
 			print "\t- " + info
+			
 	else:
 		print "\t Cluster is healthy, all checks successful"
 
