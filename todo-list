@@ -11,9 +11,12 @@ To Do List / Change Log
   - align volume state text with nagios monitoring project (DONE)
   - add self heal status (DONE)
 
-0.3 planned
-  - add check for active self heal task 
-  - add nfs daemon state for the volume
+0.3 Complete 2014/03/01
+  - add check for self heal backlog and show it in volume summary info (DONE)
+  - add protocol summary to volume info (DONE)
+  - reformatted the summary display to make it more readable/les cluttered (DONE)
+  - fix - in vol status sometimes the node name from gluster is not resolved, 
+    so pick this up and resolve 'manually' (DONE)
 
 0.4 planned
   - add volume detail information
@@ -24,10 +27,10 @@ To Do List / Change Log
   - add config file support
     - space usage triggers on volumes 
     - space usage trigger on bricks
-  - add additional checks to cater for new config file
 
 0.6 planned
-  - address the blocking problem when a node goes down, and the gstatus is invoked 
+  - address the blocking problem when a node goes down (commands to a separate thread with a 
+    timeout?) 
 
 Items being considered
 

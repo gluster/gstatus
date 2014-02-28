@@ -23,7 +23,7 @@ import 	re
 import 	xml.etree.ElementTree 	as 	ETree
 
 from 	functions.syscalls	import 	issueCMD
-from 	functions.network	import	portOpen
+from 	functions.network	import	portOpen, isIP, IPtoHost
 #
 #
 #  
@@ -67,7 +67,9 @@ class Cluster:
 		
 		self.status = "healthy"				# be optimistic at first :)	
 		
-		# cluster health is either healthy/recovery/unhealthy or down 
+		self.volume_summary = {'up':0, 'degraded':0,'partial':0,'down':0}
+		
+		# cluster health is either healthy/unhealthy or down 
 		#
 		# unhealthy 
 		#		a node is down
@@ -126,7 +128,14 @@ class Cluster:
 			for peer in peer_list:
 				
 				node_info = getAttr(peer,field_list)
-
+				
+				# Note all nodes respond with a hostname, some give an 
+				# IP address - so for consistency catch the IP address
+				# and convert it to a name
+				if isIP(node_info['hostname']):
+					host_name = IPtoHost(node_info['hostname'])
+					node_info['hostname'] = host_name
+				
 				new_node = Node(node_info['hostname'],
 						node_info['uuid'],
 						node_info['connected'])
@@ -217,7 +226,7 @@ class Cluster:
 
 			# By default from gluster 3.3 onwards, self heal is enabled for 
 			# all replicated volumes. We look at the volume type, and if it 
-			# is replicated and hasn't has self-heal explicitly disabled the
+			# is replicated and hasn't had self-heal explicitly disabled the
 			# self heal state is inferred against the nodes that contain the 
 			# bricks for the volume. With this state in place, the updateState
 			# method can cross check to see what is actually happening
@@ -374,6 +383,11 @@ class Cluster:
 				node_elements = node.findall('.//node')
 				break
 		
+		
+		#############################################################
+		# HERE
+		#############################################################
+		
 		# first get a list of self-heal elements from the xml
 		for node in node_elements:
 				
@@ -383,6 +397,10 @@ class Cluster:
 		# Process the list, updating the node's self-heal state
 		for sh_node in self_heal_list:
 			node_name = sh_node.find('./path').text
+			
+			if isIP(node_name):
+				node_name = IPtoHost(node_name)
+				
 			node_state = sh_node.find('./status').text
 			
 			node_name = os.environ['HOSTNAME'].split('.')[0] if node_name == 'localhost' else node_name
@@ -395,7 +413,21 @@ class Cluster:
 		# Propagate the self heal states to the clusters volume(s)
 		for vol_name in self.volume:
 			this_vol = self.volume[vol_name]
-			this_vol.updateSelfHeal()
+			this_vol.updateSelfHeal()		# update based on flags
+			this_vol.querySelfHeal()		# update vol state if heal is working
+			
+			this_state = this_vol.volume_state
+			
+			if this_state == 'up':
+				self.volume_summary['up'] += 1
+			elif 'degraded' in this_state:
+				self.volume_summary['degraded'] += 1
+			elif 'partial' in this_state:
+				self.volume_summary['partial'] += 1
+			else:
+				self.volume_summary['down'] += 1
+		
+			
 
 class Node:
 	""" Node object, just used as a container as a parent for bricks """
@@ -431,6 +463,7 @@ class Volume:
 	volume_attr = ['name', 'status', 'type', 'typeStr', 'replicaCount']
 
 	# status - 1=started, 2 = stopped
+	#
 	# type - 5 = dist-repl
 
 	def __init__(self,attr_dict):
@@ -458,7 +491,10 @@ class Volume:
 		self.nfs_enabled = True
 		self.self_heal_enabled = False
 		self.self_heal_string = ''
-		self.protocol = {'SMB':'yes', 'NFS':'yes','NATIVE':'yes'}
+		self.self_heal_active = False	# default to not active
+		self.self_heal_count = 0	# no. files being current healed
+		# By default all these protocols are enabled by gluster
+		self.protocol = {'SMB':'on', 'NFS':'on','NATIVE':'on'}
 
 		
 		
@@ -569,7 +605,7 @@ class Volume:
 				# This volume is not replicated, so brick disruption leads
 				# straight to a 'partial' availability state
 				if up_bricks != total_bricks:
-					self.volume_state += '(partial)'
+					self.volume_state += '(partial) '
 	
 
 
@@ -626,6 +662,36 @@ class Volume:
 			
 		return "%2d/%2d"%(active, enabled)
 
+	def querySelfHeal(self):
+		""" issue a gluster command to check whether self heal is active
+			on this volume. """
+			
+		# On gluster 3.4 --xml is not supported so parsing
+		# has to be done the old fashioned way :)"""
+		
+		(rc, vol_heal_output) = issueCMD("gluster vol heal %s info"%(self.name))
+		
+		if rc == 0:
+			
+			total_heal_count = 0
+			
+			for line in vol_heal_output:
+				line = line.lower()			# drop to lower case
+				if line.startswith('brick'):
+					brick_path = line.split()[1]
+				if  line.startswith('number'):
+					heal_count = int(line.split(':')[1])
+					self.brick[brick_path].heal_count = heal_count
+					total_heal_count += heal_count
+						
+			self.self_heal_count = total_heal_count
+			
+		else:
+			# vol heal command failed - what should we do?
+			pass
+			
+
+
 class Brick:
 	""" Brick object populated initially through vol info, and then updated
 		with data from a vol status <bla> detail command """
@@ -642,6 +708,7 @@ class Brick:
 		self.size = 0
 		self.free = 0 
 		self.used = 0
+		self.heal_count = 0
 		#self.self_heal_enabled = False	# default to off
 
 	def update(self,state, size, free, fsname, device, mnt_options):

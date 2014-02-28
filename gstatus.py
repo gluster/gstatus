@@ -42,20 +42,29 @@ def main():
 
 	active_nodes = cluster.checkNodes()
 	active_bricks = cluster.checkBricks()
-	active_volumes = cluster.checkVolumes()
 	active_self_heal = cluster.checkSelfHeal()
 	
 	if status_request:
+		
+		print ("      Status: %s  Glusterfs: %s\n"%(cluster.status.upper().ljust(20),
+				cluster.glfs_version))
 
-		print "Cluster Summary: %s"%(cluster.status).upper().ljust(50)
-		print ("  Version - %s  Nodes - %2d/%2d  Bricks - %2d/%2d  Volumes - %2d/%2d  Self-Heal - %2d/%2d"
-			%(cluster.glfs_version,
-			active_nodes,cluster.numNodes(),
-			active_bricks,cluster.numBricks(),
-			active_volumes,cluster.numVolumes(),
-			active_self_heal,cluster.numSelfHeal()))
+		print ("   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
+				%(active_nodes,cluster.numNodes(),
+				cluster.volume_summary['up']))
 
-		print "\nVolume Summary"
+		print ("   Self Heal: %2d/%2d\t\t         %2d Up(Degraded)"
+				%(active_self_heal,cluster.numSelfHeal(),
+				cluster.volume_summary['degraded']))
+
+		print ("   Bricks   : %2d/%2d\t\t         %2d Up(Partial)"
+				%(active_bricks,cluster.numBricks(),
+				cluster.volume_summary['partial']))
+
+		print (" "*41 + "%2d Down"
+				%(cluster.volume_summary['down']))
+
+		print "Volume Summary"
 		for vol_name in cluster.volume:
 			vol = cluster.volume[vol_name]
 			(up,all) = vol.brickStates()
@@ -64,24 +73,25 @@ def main():
 				vol.volume_state.upper(),
 				up,all,
 				vol.typeStr))
-			print ("\t" + " "*17 + "Capacity: %s/%s (used,total)"
+			print ("\t" + " "*17 + "Capacity: %s/%s (used/total)"
 				%(displayBytes(vol.used_capacity),
 				displayBytes(vol.usable_capacity)))
-			print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string))
-			print ("\t" + " "*17 + "Enabled Protocols: Native:%s  NFS:%s  SMB:%s"
+			print ("\t" + " "*17 + "Self Heal: %s   Heal backlog:%d files"%(vol.self_heal_string, vol.self_heal_count))
+			print ("\t" + " "*17 + "Protocols: Native:%s  NFS:%s  SMB:%s"
 				%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
+			print
 				
 
-	print "\nStatus Messages"
-	if cluster.messages:
-		
-		# Add the current cluster state as the first message to display
-		cluster.messages.insert(0,"Cluster is %s"%(cluster.status.upper()))
-		for info in cluster.messages:
-			print "\t- " + info
+		print "Status Messages"
+		if cluster.messages:
 			
-	else:
-		print "\t Cluster is healthy, all checks successful"
+			# Add the current cluster state as the first message to display
+			cluster.messages.insert(0,"Cluster is %s"%(cluster.status.upper()))
+			for info in cluster.messages:
+				print "\t- " + info
+				
+		else:
+			print "\t Cluster is healthy, all checks successful"
 
 	print
 
@@ -90,7 +100,7 @@ if __name__ == '__main__':
 	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.2")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.3")
 	parser.add_option("-s","--status",dest="status",action="store_true",default=True,help="Show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", help="Volume level view (NOT IMPLEMENTED YET!)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="Show all cluster information")

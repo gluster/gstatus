@@ -35,6 +35,29 @@ def portOpen(hostname, port, scan_timeout=0.05):
 	
 	return state
 	
+def IPtoHost(addr):
+	""" convert an IP address to a host name """
+	
+	try:
+		host_name = socket.gethostbyaddr(addr)[0]
+	except:
+		# can't resolve it, so default to the address given
+		host_name = addr
+	
+	return host_name	
+	
+	
+def isIP(host_string):
+	""" Quick method to determine whether a string is an IP address or not """
+	
+	try:
+		x = socket.inet_aton(host_string)
+		response = True
+	except:
+		response = False
+	
+	return response
+	
 
 if __name__ == '__main__':
 	pass
