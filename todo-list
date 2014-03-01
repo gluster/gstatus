@@ -18,7 +18,9 @@ To Do List / Change Log
   - fix - in vol status sometimes the node name from gluster is not resolved, 
     so pick this up and resolve 'manually' (DONE)
 
-0.4 planned
+0.4 Pending
+  - add a version check, to abort the run if gluster is not >= 3.4 (DONE)
+  - add capacity info to the summary section
   - add volume detail information
     - vol components, replica set relationships
   - add brick check to make recommendations on mount point definitions/filesystem 

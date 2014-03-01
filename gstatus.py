@@ -28,6 +28,8 @@ from functions.syscalls	import issueCMD
 from functions.utils	import displayBytes
 from classes.gluster	import Cluster, Volume, Brick
 
+MIN_VERSION = 3.4
+
 # Known issues;
 # if the checks are done right after a node down event, the vol status query does not
 # complete and ends up blocking on the originating node until the node timeout occurs.
@@ -35,9 +37,8 @@ from classes.gluster	import Cluster, Volume, Brick
 def main():
 	
 	print " "			# add some spacing to make the output stand out more
-
+	
 	cluster.initialise()
-
 	cluster.updateState()
 
 	active_nodes = cluster.activeNodes()
@@ -116,9 +117,17 @@ if __name__ == '__main__':
 		status_request = True
 		volume_request = True
 
-	# Create a cluster object. This will init the cluster with the current
-	# node,volume and brick counts
+	# Create a cluster object. This simply creates the structure of 
+	# the object and populates the glusterfs version 
 	cluster = Cluster()
 	
-	main()
+	if cluster.glfsVersionOK(MIN_VERSION):
+		
+		main()
+		
+	else:
+		
+		print "gstatus is not compatible with this version of glusterfs %s"%(cluster.glfs_version)
+		exit(16)
+
 

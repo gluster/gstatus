@@ -21,9 +21,11 @@ import 	os
 import 	sys
 import 	re
 import 	xml.etree.ElementTree 	as 	ETree
+from 	decimal import *
 
 from 	functions.syscalls	import 	issueCMD
 from 	functions.network	import	portOpen, isIP, IPtoHost
+
 #
 #
 #  
@@ -69,7 +71,8 @@ class Cluster:
 		
 		self.volume_summary = {'up':0, 'degraded':0,'partial':0,'down':0}
 		
-		# cluster health is either healthy/unhealthy or down 
+		# cluster status is either healthy/unhealthy or potentially down
+		# (although a down cluster means all nodes are non-responsive)
 		#
 		# unhealthy 
 		#		a node is down
@@ -254,7 +257,17 @@ class Cluster:
 		""" return the version of gluster """
 		(rc, versInfo) = issueCMD("gluster --version")
 		return versInfo[0].split()[1]
+	
+	def glfsVersionOK(self, min_version):
 		
+		(min_major, min_minor) = str(min_version).split('.')
+		(host_major, host_minor) = self.glfs_version.split('.')[:2]
+		
+		if ( int(host_major) >= int(min_major) and 
+			int(host_minor) >= int(min_minor)):
+			return True
+		else:
+			return False
 
 	def numVolumes(self):
 			return len(self.volume)
@@ -557,6 +570,7 @@ class Volume:
 		
 		# if all the bricks are online the usable is simple
 		if up_bricks == total_bricks:
+			
 			self.usable_capacity = self.raw_capacity / self.replicaCount
 			self.used_capacity = self.raw_used / self.replicaCount
 
