@@ -39,7 +39,7 @@ def IPtoHost(addr):
 	""" convert an IP address to a host name """
 	
 	try:
-		host_name = socket.gethostbyaddr(addr)[0]
+		host_name = socket.gethostbyaddr(addr)[0].split('.')[0]
 	except:
 		# can't resolve it, so default to the address given
 		host_name = addr
