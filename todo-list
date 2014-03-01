@@ -23,7 +23,7 @@ To Do List / Change Log
   - add capacity info to the summary section
   - add volume detail information
     - vol components, replica set relationships
-  - add brick check to make recommendations on mount point definitions/filesystem 
+  - add brick check to make recommendations on mount point definitions/filesystem, and an option to suppress recommendations
 
 0.5 planned
   - add config file support
