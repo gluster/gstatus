@@ -203,7 +203,7 @@ class Cluster:
 				
 				brick_path = brick.text
 				(hostname,pathname) = brick_path.split(':')
-				new_brick = Brick(brick_path, self.node[hostname])
+				new_brick = Brick(brick_path, self.node[hostname], new_volume.name)
 
 				# Add the brick to the cluster and volume
 				self.brick[brick_path] = new_brick
@@ -265,49 +265,59 @@ class Cluster:
 	def numBricks(self):
 		return len(self.brick)
 
-	def checkNodes(self):
+	def activeNodes(self):
 		""" Count no. of nodes in an up state """
 		ctr = 0
 		for hostname in self.node:
 			if self.node[hostname].state == '1':
 				ctr += 1
-			else:
-				self.messages.append("%s is down"%(hostname))
-				self.status = 'unhealthy'
-				
-		# if all the nodes are down - cluster state is Down
-		if ctr == 0:
-			self.status = 'down'
 		
 		return ctr
 
-	def checkBricks(self):
+	def activeBricks(self):
 		""" return the number of bricks in an up state """
 		ctr = 0
 		for brick_name in self.brick:
 			if self.brick[brick_name].up:
 				ctr +=1
-			else:
-				self.messages.append("Brick %s is down/unavailable"%(brick_name))
 
 		return ctr
 
-
-	def checkVolumes(self):
-		""" return the number of volumes in an up state """
+	def healthChecks(self):
+		""" perform checks on elements that affect the reported state of the cluster """
 		
-		ctr = 0 
-
+		# 1. volumes in a down or partial state
 		for volume_name in self.volume:
-			if self.volume[volume_name].volume_state == 'up':
-				ctr += 1
-				continue
+			this_volume = self.volume[volume_name]
+			
+			vol_msg = ''
+			
+			if 'down' in this_volume.volume_state:
+				vol_msg = "Volume '%s' is down"%(volume_name)
 				
-			# if this volume is down or in a partial state - propagate to the cluster
-			if self.volume[volume_name].volume_state in ['down','up(partial)']:
-				self.status = 'unhealthy'				
+			if 'partial' in this_volume.volume_state:
+				vol_msg = "Volume '%s' has inaccessible data, due to missing bricks"%(volume_name)
 				
-		return ctr
+			if vol_msg:
+				self.status = 'unhealthy'
+				self.messages.append(vol_msg) 
+				
+		
+		# 2. nodes that are down
+		for node_name in self.node:
+			this_node = self.node[node_name]
+			if this_node.state != '1':
+				self.messages.append("Cluster node '%s' is down"%(node_name))
+				self.status = 'unhealthy'		
+		
+		# 3. check the bricks
+		for brick_name in self.brick:
+			this_brick = self.brick[brick_name]
+			if not this_brick.up:
+				self.messages.append("Brick %s in volume '%s' is down/unavailable"%(brick_name, this_brick.owning_volume))
+		
+		# 4. Insert your checks HERE!
+
 		
 	def checkSelfHeal(self):
 		""" return the number of nodes that have self-heal active """
@@ -696,7 +706,7 @@ class Brick:
 	""" Brick object populated initially through vol info, and then updated
 		with data from a vol status <bla> detail command """
 		
-	def __init__(self, brick_path, node_instance):
+	def __init__(self, brick_path, node_instance, volume_name):
 		self.brick_path = brick_path
 		self.node = node_instance
 		self.node_name = brick_path.split(':')[0] 
@@ -709,6 +719,7 @@ class Brick:
 		self.free = 0 
 		self.used = 0
 		self.heal_count = 0
+		self.owning_volume = volume_name
 		#self.self_heal_enabled = False	# default to off
 
 	def update(self,state, size, free, fsname, device, mnt_options):

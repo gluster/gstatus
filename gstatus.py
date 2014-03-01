@@ -40,9 +40,11 @@ def main():
 
 	cluster.updateState()
 
-	active_nodes = cluster.checkNodes()
-	active_bricks = cluster.checkBricks()
+	active_nodes = cluster.activeNodes()
+	active_bricks = cluster.activeBricks()
 	active_self_heal = cluster.checkSelfHeal()
+	
+	cluster.healthChecks()
 	
 	if status_request:
 		
