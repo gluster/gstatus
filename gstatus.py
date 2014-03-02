@@ -84,8 +84,9 @@ def main():
 					vol.volume_state.upper(),
 					up,all,
 					vol.typeStr))
-				print ("\t" + " "*17 + "Capacity: %s/%s (used/total)"
-					%(displayBytes(vol.used_capacity,display_units),
+				print ("\t" + " "*17 + "Capacity: (%d used) %s/%s (used/total)"
+					%(vol.pct_used,
+					displayBytes(vol.used_capacity,display_units),
 					displayBytes(vol.usable_capacity,display_units)))
 				print ("\t" + " "*17 + "Self Heal: %s   Heal backlog:%d files"%(vol.self_heal_string, vol.self_heal_count))
 				print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"

@@ -525,6 +525,7 @@ class Volume:
 		self.raw_used = 0
 		self.usable_capacity = 0
 		self.used_capacity = 0
+		self.pct_used = 0
 		self.nfs_enabled = True
 		self.self_heal_enabled = False
 		self.self_heal_string = ''
@@ -602,6 +603,9 @@ class Volume:
 			else:
 				self.usable_capacity = self.raw_capacity
 				self.used_capacity = self.raw_used
+
+		# with the volume used and usable calculated, we can derive the %used
+		self.pct_used = (self.used_capacity / self.usable_capacity) * 100
 
 		# ----------------------------------------------------------------
 		# Now look at the brick status and volume type to derive the volume
