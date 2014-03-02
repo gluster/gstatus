@@ -605,13 +605,12 @@ class Volume:
 				self.used_capacity = self.raw_used
 
 		# with the volume used and usable calculated, we can derive the %used
-		self.pct_used = (self.used_capacity / self.usable_capacity) * 100
+		self.pct_used = (self.used_capacity / float(self.usable_capacity)) * 100
 
 		# ----------------------------------------------------------------
 		# Now look at the brick status and volume type to derive the volume
 		# status
 		# ----------------------------------------------------------------
-
 		if up_bricks == 0:
 			self.volume_state = 'down'
 		else:

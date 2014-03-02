@@ -51,7 +51,7 @@ def main():
 	print ("      Status: %s Capacity: %s(raw bricks)"%(cluster.status.upper().ljust(17),
 			displayBytes(cluster.raw_capacity,display_units)))
 		
-	print ("   Glusterfs: %s           %s(Usable)\n"%(cluster.glfs_version.ljust(17),
+	print ("   Glusterfs: %s           %s(usable)\n"%(cluster.glfs_version.ljust(17),
 			displayBytes(cluster.usable_capacity,display_units)))	
 	
 	if state_request:
@@ -84,7 +84,7 @@ def main():
 					vol.volume_state.upper(),
 					up,all,
 					vol.typeStr))
-				print ("\t" + " "*17 + "Capacity: (%d used) %s/%s (used/total)"
+				print ("\t" + " "*17 + "Capacity: (%d%% used) %s/%s (used/total)"
 					%(vol.pct_used,
 					displayBytes(vol.used_capacity,display_units),
 					displayBytes(vol.usable_capacity,display_units)))
