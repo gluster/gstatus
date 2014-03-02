@@ -47,15 +47,15 @@ def main():
 	active_self_heal = cluster.checkSelfHeal()
 	
 	cluster.healthChecks()
+
+	print ("      Status: %s Capacity: %s(raw bricks)"%(cluster.status.upper().ljust(17),
+			displayBytes(cluster.raw_capacity)))
+		
+	print ("   Glusterfs: %s           %s(Usable)\n"%(cluster.glfs_version.ljust(17),
+			displayBytes(cluster.usable_capacity)))	
 	
 	if status_request:
 		
-		print ("      Status: %s Capacity: %s(raw bricks)"%(cluster.status.upper().ljust(17),
-				displayBytes(cluster.raw_capacity)))
-		
-		print ("   Glusterfs: %s           %s(Usable)\n"%(cluster.glfs_version.ljust(17),
-				displayBytes(cluster.usable_capacity)))
-
 		print ("   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
 				%(active_nodes,cluster.numNodes(),
 				cluster.volume_summary['up']))
@@ -71,25 +71,28 @@ def main():
 		print (" "*41 + "%2d Down"
 				%(cluster.volume_summary['down']))
 
-
-		print "Volume Summary"
+	if volume_request:
+		print "Volume Information"
+		
 		for vol_name in cluster.volume:
-			vol = cluster.volume[vol_name]
-			(up,all) = vol.brickStates()
-			print ("\t%s %s - %d/%d bricks up - %s"
-				%(vol_name.ljust(16,' '), 
-				vol.volume_state.upper(),
-				up,all,
-				vol.typeStr))
-			print ("\t" + " "*17 + "Capacity: %s/%s (used/total)"
-				%(displayBytes(vol.used_capacity),
-				displayBytes(vol.usable_capacity)))
-			print ("\t" + " "*17 + "Self Heal: %s   Heal backlog:%d files"%(vol.self_heal_string, vol.self_heal_count))
-			print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
-				%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
-			print
+			
+			if len(volume_list) == 0 or vol_name in volume_list:
+				vol = cluster.volume[vol_name]
+				(up,all) = vol.brickStates()
+				print ("\t%s %s - %d/%d bricks up - %s"
+					%(vol_name.ljust(16,' '), 
+					vol.volume_state.upper(),
+					up,all,
+					vol.typeStr))
+				print ("\t" + " "*17 + "Capacity: %s/%s (used/total)"
+					%(displayBytes(vol.used_capacity),
+					displayBytes(vol.usable_capacity)))
+				print ("\t" + " "*17 + "Self Heal: %s   Heal backlog:%d files"%(vol.self_heal_string, vol.self_heal_count))
+				print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
+					%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
+				print
 				
-
+	if status_request:
 		print "Status Messages"
 		if cluster.messages:
 			
@@ -109,14 +112,20 @@ if __name__ == '__main__':
 	usageInfo = "usage: %prog [options]"
 	
 	parser = OptionParser(usage=usageInfo,version="%prog 0.3")
-	parser.add_option("-s","--status",dest="status",action="store_true",default=True,help="Show highlevel health of the cluster")
-	parser.add_option("-v","--volume",dest="volumes", help="Volume level view (NOT IMPLEMENTED YET!)")
+	parser.add_option("-s","--status",dest="status",action="store_true",help="Show highlevel health of the cluster")
+	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="Volume level view")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="Show all cluster information")
 	parser.add_option("--xml",dest="xml",action="store_true",default=False,help="produce output in XML format (NOT IMPLEMENTED YET!)")
 	(options, args) = parser.parse_args()
 
 	status_request = options.status
 	volume_request = options.volumes
+	
+	volume_list = []				# empty list of vols = show them all 
+	
+	if volume_request and args:
+		volume_list = args
+		
 	
 	if options.everything:
 		status_request = True
