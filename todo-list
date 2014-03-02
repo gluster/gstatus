@@ -21,9 +21,8 @@ To Do List / Change Log
 0.4 Pending
   - add a version check, to abort the run if gluster is not >= 3.4 (DONE)
   - add capacity info to the summary section (DONE)
-  - add volume detail information
+  - add volume detail information (IN-PROGRESS)
     - vol components, replica set relationships
-  - add brick check to make recommendations on mount point definitions/filesystem, and an option to suppress recommendations
 
 0.5 planned
   - add config file support
@@ -33,6 +32,9 @@ To Do List / Change Log
 0.6 planned
   - address the blocking problem when a node goes down (commands to a separate thread with a 
     timeout?) 
+
+0.7 planned
+  - add brick check to make recommendations on mount point definitions/filesystem, and an option to suppress recommendations
 
 Items being considered
 
