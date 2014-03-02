@@ -40,6 +40,7 @@ def main():
 	
 	cluster.initialise()
 	cluster.updateState()
+	cluster.calcCapacity()
 
 	active_nodes = cluster.activeNodes()
 	active_bricks = cluster.activeBricks()
@@ -49,8 +50,11 @@ def main():
 	
 	if status_request:
 		
-		print ("      Status: %s  Glusterfs: %s\n"%(cluster.status.upper().ljust(20),
-				cluster.glfs_version))
+		print ("      Status: %s Capacity: %s(raw bricks)"%(cluster.status.upper().ljust(20),
+				displayBytes(cluster.raw_capacity)))
+		
+		print ("   Glusterfs: %s           %s(Usable)\n"%(cluster.glfs_version.ljust(20),
+				displayBytes(cluster.usable_capacity)))
 
 		print ("   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
 				%(active_nodes,cluster.numNodes(),
@@ -66,6 +70,7 @@ def main():
 
 		print (" "*41 + "%2d Down"
 				%(cluster.volume_summary['down']))
+
 
 		print "Volume Summary"
 		for vol_name in cluster.volume:

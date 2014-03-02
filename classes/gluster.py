@@ -65,6 +65,8 @@ class Cluster:
 		self.glfs_version = self.getVersion()
 		self.raw_capacity = 0
 		self.usable_capacity = 0
+		self.used_capacity = 0
+		self.free_capacity = 0 
 		self.messages = []
 		
 		self.status = "healthy"				# be optimistic at first :)	
@@ -406,11 +408,6 @@ class Cluster:
 				node_elements = node.findall('.//node')
 				break
 		
-		
-		#############################################################
-		# HERE
-		#############################################################
-		
 		# first get a list of self-heal elements from the xml
 		for node in node_elements:
 				
@@ -450,7 +447,13 @@ class Cluster:
 			else:
 				self.volume_summary['down'] += 1
 		
-			
+	def calcCapacity(self):
+		""" update the cluster's overall capacity stats based on the
+			volume information """
+		
+		pass
+		
+		
 
 class Node:
 	""" Node object, just used as a container as a parent for bricks """
