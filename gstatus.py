@@ -49,10 +49,10 @@ def main():
 	cluster.healthChecks()
 
 	print ("      Status: %s Capacity: %s(raw bricks)"%(cluster.status.upper().ljust(17),
-			displayBytes(cluster.raw_capacity)))
+			displayBytes(cluster.raw_capacity,display_units)))
 		
 	print ("   Glusterfs: %s           %s(Usable)\n"%(cluster.glfs_version.ljust(17),
-			displayBytes(cluster.usable_capacity)))	
+			displayBytes(cluster.usable_capacity,display_units)))	
 	
 	if state_request:
 		
@@ -85,8 +85,8 @@ def main():
 					up,all,
 					vol.typeStr))
 				print ("\t" + " "*17 + "Capacity: %s/%s (used/total)"
-					%(displayBytes(vol.used_capacity),
-					displayBytes(vol.usable_capacity)))
+					%(displayBytes(vol.used_capacity,display_units),
+					displayBytes(vol.usable_capacity,display_units)))
 				print ("\t" + " "*17 + "Self Heal: %s   Heal backlog:%d files"%(vol.self_heal_string, vol.self_heal_count))
 				print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
 					%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
@@ -115,11 +115,15 @@ if __name__ == '__main__':
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information")
+	parser.add_option("-u","--units",dest="units",choices=['bin','dec'],help="display capacity units in DECimal or BINary format (GB vs GiB)")
 	#parser.add_option("--xml",dest="xml",action="store_true",default=False,help="produce output in XML format (NOT IMPLEMENTED YET!)")
 	(options, args) = parser.parse_args()
 
 	state_request = options.state
 	volume_request = options.volumes
+	
+	
+	display_units = options.units if options.units else 'bin'
 	
 	volume_list = []				# empty list of vols = show them all 
 	
