@@ -65,8 +65,6 @@ class Cluster:
 		self.glfs_version = self.getVersion()
 		self.raw_capacity = 0
 		self.usable_capacity = 0
-		self.used_capacity = 0
-		self.free_capacity = 0 
 		self.messages = []
 		
 		self.status = "healthy"				# be optimistic at first :)	
@@ -327,11 +325,19 @@ class Cluster:
 		
 		# 3. check the bricks
 		for brick_name in self.brick:
+			
 			this_brick = self.brick[brick_name]
+			
+			# 3.1 check for state
 			if not this_brick.up:
 				self.messages.append("Brick %s in volume '%s' is down/unavailable"%(brick_name, this_brick.owning_volume))
-		
+			
+			# 3.2 check for best practice
+			
+			
 		# 4. Insert your checks HERE!
+		
+		
 
 		
 	def checkSelfHeal(self):
@@ -451,7 +457,12 @@ class Cluster:
 		""" update the cluster's overall capacity stats based on the
 			volume information """
 		
-		pass
+		for vol_name in self.volume:
+			this_vol = self.volume[vol_name]
+		
+			self.raw_capacity += this_vol.raw_capacity
+			self.usable_capacity += this_vol.usable_capacity
+		
 		
 		
 

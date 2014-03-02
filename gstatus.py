@@ -50,10 +50,10 @@ def main():
 	
 	if status_request:
 		
-		print ("      Status: %s Capacity: %s(raw bricks)"%(cluster.status.upper().ljust(20),
+		print ("      Status: %s Capacity: %s(raw bricks)"%(cluster.status.upper().ljust(17),
 				displayBytes(cluster.raw_capacity)))
 		
-		print ("   Glusterfs: %s           %s(Usable)\n"%(cluster.glfs_version.ljust(20),
+		print ("   Glusterfs: %s           %s(Usable)\n"%(cluster.glfs_version.ljust(17),
 				displayBytes(cluster.usable_capacity)))
 
 		print ("   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
@@ -85,7 +85,7 @@ def main():
 				%(displayBytes(vol.used_capacity),
 				displayBytes(vol.usable_capacity)))
 			print ("\t" + " "*17 + "Self Heal: %s   Heal backlog:%d files"%(vol.self_heal_string, vol.self_heal_count))
-			print ("\t" + " "*17 + "Protocols: Native:%s  NFS:%s  SMB:%s"
+			print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
 				%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
 			print
 				
@@ -94,12 +94,12 @@ def main():
 		if cluster.messages:
 			
 			# Add the current cluster state as the first message to display
-			cluster.messages.insert(0,"Cluster is %s"%(cluster.status.upper()))
+			cluster.messages.insert(0,"  - Cluster is %s"%(cluster.status.upper()))
 			for info in cluster.messages:
-				print "\t- " + info
+				print "  - " + info
 				
 		else:
-			print "\t Cluster is healthy, all checks successful"
+			print "  - Cluster is healthy, all checks successful"
 
 	print
 
