@@ -54,7 +54,7 @@ def main():
 	print ("   Glusterfs: %s           %s(Usable)\n"%(cluster.glfs_version.ljust(17),
 			displayBytes(cluster.usable_capacity)))	
 	
-	if status_request:
+	if state_request:
 		
 		print ("   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
 				%(active_nodes,cluster.numNodes(),
@@ -92,7 +92,7 @@ def main():
 					%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
 				print
 				
-	if status_request:
+	if state_request:
 		print "Status Messages"
 		if cluster.messages:
 			
@@ -112,13 +112,13 @@ if __name__ == '__main__':
 	usageInfo = "usage: %prog [options]"
 	
 	parser = OptionParser(usage=usageInfo,version="%prog 0.3")
-	parser.add_option("-s","--status",dest="status",action="store_true",help="Show highlevel health of the cluster")
-	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="Volume level view")
-	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="Show all cluster information")
-	parser.add_option("--xml",dest="xml",action="store_true",default=False,help="produce output in XML format (NOT IMPLEMENTED YET!)")
+	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
+	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
+	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information")
+	#parser.add_option("--xml",dest="xml",action="store_true",default=False,help="produce output in XML format (NOT IMPLEMENTED YET!)")
 	(options, args) = parser.parse_args()
 
-	status_request = options.status
+	state_request = options.state
 	volume_request = options.volumes
 	
 	volume_list = []				# empty list of vols = show them all 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
 		
 	
 	if options.everything:
-		status_request = True
+		state_request = True
 		volume_request = True
 
 	# Create a cluster object. This simply creates the structure of 
