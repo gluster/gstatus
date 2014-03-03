@@ -91,6 +91,12 @@ def main():
 				print ("\t" + " "*17 + "Self Heal: %s   Heal backlog:%d files"%(vol.self_heal_string, vol.self_heal_count))
 				print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
 					%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
+					
+				if volume_layout:
+					print
+					vol.printLayout()	
+					
+					
 				print
 				
 	if state_request:
@@ -98,7 +104,7 @@ def main():
 		if cluster.messages:
 			
 			# Add the current cluster state as the first message to display
-			cluster.messages.insert(0,"  - Cluster is %s"%(cluster.status.upper()))
+			cluster.messages.insert(0,"Cluster is %s"%(cluster.status.upper()))
 			for info in cluster.messages:
 				print "  - " + info
 				
@@ -112,17 +118,19 @@ if __name__ == '__main__':
 	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.3")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.4")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information")
 	parser.add_option("-u","--units",dest="units",choices=['bin','dec'],help="display capacity units in DECimal or BINary format (GB vs GiB)")
+	parser.add_option("-l","--layout",dest="layout",action="store_true",default=False,help="show brick layout when used with -v, or -a")
 	#parser.add_option("--xml",dest="xml",action="store_true",default=False,help="produce output in XML format (NOT IMPLEMENTED YET!)")
 	(options, args) = parser.parse_args()
 
 	state_request = options.state
 	volume_request = options.volumes
 	
+	volume_layout = options.layout
 	
 	display_units = options.units if options.units else 'bin'
 	

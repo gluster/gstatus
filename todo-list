@@ -18,11 +18,13 @@ To Do List / Change Log
   - fix - in vol status sometimes the node name from gluster is not resolved, 
     so pick this up and resolve 'manually' (DONE)
 
-0.4 Pending
+0.4 Complete 2014/03/04
   - add a version check, to abort the run if gluster is not >= 3.4 (DONE)
   - add capacity info to the summary section (DONE)
-  - add volume detail information (IN-PROGRESS)
+  - add pct used for each volume (DONE)
+  - add volume detail information (DONE)
     - vol components, replica set relationships
+  - fix - malformed xml from gluster showing bricks against wrong vols
 
 0.5 planned
   - add config file support
@@ -43,6 +45,7 @@ Known BUGS
 - invocation after a node down event will block vol status. This needs to be 
   detected and the run aborted to prevent the wrong information being shown to
   the user
+- gluster is not returning valid xml when nodes are not present in the config. The problem gets worse with cluster size, and disruption. Current testing has nly allowed 4 node tests to be performed.
 
 
 

@@ -25,6 +25,7 @@ from 	decimal import *
 
 from 	functions.syscalls	import 	issueCMD
 from 	functions.network	import	portOpen, isIP, IPtoHost
+from 	functions.utils		import 	displayBytes
 
 #
 #
@@ -172,6 +173,8 @@ class Cluster:
 			new_volume = Volume(vol_dict)
 			self.volume[new_volume.name] = new_volume
 			
+			#print "DEBUG - adding volume " + new_volume.name
+			
 			# add information about any volume options
 			opt_nodes = vol_object.findall('.//option')
 			for option in opt_nodes:
@@ -205,7 +208,11 @@ class Cluster:
 			for brick in brick_nodes:
 				
 				brick_path = brick.text
+				new_volume.brick_order.append(brick_path)
 				(hostname,pathname) = brick_path.split(':')
+				
+				# print "DEBUG - adding brick " + brick_path
+				
 				new_brick = Brick(brick_path, self.node[hostname], new_volume.name)
 
 				# Add the brick to the cluster and volume
@@ -299,21 +306,22 @@ class Cluster:
 	def healthChecks(self):
 		""" perform checks on elements that affect the reported state of the cluster """
 		
+		vol_msgs = []
 		# 1. volumes in a down or partial state
 		for volume_name in self.volume:
 			this_volume = self.volume[volume_name]
 			
-			vol_msg = ''
-			
 			if 'down' in this_volume.volume_state:
-				vol_msg = "Volume '%s' is down"%(volume_name)
+				vol_msgs.append("Volume '%s' is down"%(volume_name))
 				
 			if 'partial' in this_volume.volume_state:
-				vol_msg = "Volume '%s' has inaccessible data, due to missing bricks"%(volume_name)
-				
-			if vol_msg:
+				vol_msgs.append("Volume '%s' is in a PARTIAL state, some data is inaccessible data, due to missing bricks"%(volume_name))
+				vol_msgs.append("WARNING -> Write requests may fail against volume '%s'"%(this_volume.name))				
+								
+			if vol_msgs:
 				self.status = 'unhealthy'
-				self.messages.append(vol_msg) 
+				# add the volume related error messages to the cluster message list
+				self.messages += vol_msgs
 				
 		
 		# 2. nodes that are down
@@ -381,6 +389,8 @@ class Cluster:
 		
 		vol_elements = xml_root.findall('.//volume')
 		
+		# print "DEBUG --> " + str(len(vol_elements))
+		
 		for vol_object in vol_elements:
 			
 			volume_name = vol_object.find('./volName').text
@@ -388,7 +398,10 @@ class Cluster:
 			# Update the volume, to provide capacity and status information
 			self.volume[volume_name].update(vol_object)
 			
+	
+		# ---------------------------------------------------------------------
 		# Now we look at a vol status output, to examine the self-heal states	
+		# ---------------------------------------------------------------------			
 		(rc, vol_status) = issueCMD("gluster vol status --xml")
 		if rc > 0:
 			# unable to get updates from a vol status command
@@ -401,21 +414,18 @@ class Cluster:
 		self_heal_list = []
 		
 		node_elements = xml_root.findall('.//node')
-		
-		# there's a big in 3.4, where when a node is missing the xml returned is malformed
-		# returning a node within a node (the upper level nodes represents the missing
-		# node slot I assume!)
-		
-		# To address, we look for the problem and work around it!
-		for node in node_elements:
-			
-			if node.find('./node'):
-				# reset the node elements to this inner level
-				node_elements = node.findall('.//node')
-				break
+		# print "DEBUG --> node elements in vol status is " + str(len(node_elements))
 		
 		# first get a list of self-heal elements from the xml
 		for node in node_elements:
+			
+			# WORKAROUND
+			# there's a big in 3.4, where when a node is missing the xml returned is malformed
+			# returning a node within a node so we can't use the normal findall method to 
+			# provide a list of node elements to cycle through			
+			if node.find('./node'):
+				continue
+		
 				
 			if node.find('./hostname').text == 'Self-heal Daemon':
 				self_heal_list.append(node)
@@ -515,6 +525,7 @@ class Volume:
 	
 		self.volume_state = 'down'	# start with a down state
 		self.brick = {}				# pointers to the brick objects that make up this vol
+		self.brick_order = []		# list of the bricks in the order they appear
 		self.brick_total = 0
 		self.replica_set=[]	   		# list, where each item is a tuple, of brick objects
 		self.replica_set_state=[]  	# list show number of bricks offline in each repl set
@@ -542,40 +553,61 @@ class Volume:
 			each element updating the volume info and associated 
 			brick information/state
 		"""
+		
+		#print "DEBUG --> Attempting to update volume " + self.name 
 			
-		# Node elements correspond to a brick associated with this volume
-		# so we first process the node elements to determine brick state
-		for node in volume_xml.findall('.//node'):
-			node_info = {}
-			for brick_info in node.getchildren():
-				node_info[brick_info.tag] = brick_info.text
-
-			# Bug in gluster 3.4 malformed XML when a node is missing
-			try:
+		# Step through the children of the volume element
+		for child in volume_xml.getchildren():
+			if child.tag == 'node':
 				
-				brick_path = node_info['hostname'] + ":" + node_info['path']
+				# a node element contains the brick information
+				node_attributes = len(child.getchildren())
 				
-			except:
+				# print "DEBUG --> node attributes count is " + str(node_attributes)
 				
-				print "Malformed XML detected - node element, without a 'hostname' tag"
-				
-				# skip this node element and continue with the next one
-				continue
-
-			this_brick = self.brick[brick_path]	
-			brick_state = True if node_info['status'] == '1' else False
-			
-			# update this brick
-			this_brick.update(brick_state,
-					int(node_info['sizeTotal']),
-					int(node_info['sizeFree']),
-					node_info['fsName'],
-					node_info['device'],
-					node_info['mntOptions'])
+				if node_attributes == 12:
+					# All good this is right
+					pass
 					
-			self.raw_capacity += int(node_info['sizeTotal'])
-			self.raw_used += int(node_info['sizeTotal']) - int(node_info['sizeFree'])
-
+				elif node_attributes <=3:
+					# WORKAROUND
+					# This is a gluster bug that I'm working around. When a node is
+					# down, you get a node element inside a node element (all
+					# node elements should be children of volume element!)
+					child = child.find('./node')
+					# print "DEBUG - adjusting element"
+					
+				elif node_attributes <12:
+					# print "DEBUG --> skipping stanza"
+					continue
+					
+				node_info = {}
+				correct_XML = False
+				for brick_info in child.getchildren():
+					
+					# print "DEBUG setting " + brick_info.tag + " to " + brick_info.text
+					
+					node_info[brick_info.tag] = brick_info.text
+					correct_XML = True
+					
+				if correct_XML:
+					brick_path = node_info['hostname'] + ":" + node_info['path']
+					
+					brick_state = True if node_info['status'] == '1' else False
+				
+					this_brick = self.brick[brick_path]
+					
+					# update this brick
+					this_brick.update(brick_state,
+							int(node_info['sizeTotal']),
+							int(node_info['sizeFree']),
+							node_info['fsName'],
+							node_info['device'],
+							node_info['mntOptions'])
+						
+					self.raw_capacity += int(node_info['sizeTotal'])
+					self.raw_used += int(node_info['sizeTotal']) - int(node_info['sizeFree'])
+			
 
 		# ----------------------------------------------------------------
 		# Brick info has been updated, we can calculate the volume capacity
@@ -647,12 +679,6 @@ class Volume:
 				# straight to a 'partial' availability state
 				if up_bricks != total_bricks:
 					self.volume_state += '(partial) '
-	
-
-
-	def pctUsed(self):
-		""" PLACEHOLDER """
-		pass
 	
 	def numBricks(self):
 		""" return the number of bricks in the volume """
@@ -730,7 +756,60 @@ class Volume:
 		else:
 			# vol heal command failed - what should we do?
 			pass
+
+	def printLayout(self):
+		""" print function used to show the relationships of the bricks in
+			a volume """
+
+		supported_volume_types = ['Replicated', 'Distribute', 'Distributed-Replicate']
+
+		if self.typeStr not in supported_volume_types:
+			print "\tDisplay of this volume type has yet to be implemented"
+			return
+
+		print "\t%s %s"%(self.name.ljust(16,'-'),'+')
+		print "\t" + " "*17 + "|"
+		offset=16
+
+		if self.typeStr.startswith('Dist'):
+			print " "*offset + "Distribute (dht)"
+			offset=25
+		else:
+			print " "*offset + "Replicated (afr)"
+			offset = 25
+
+
+		if self.replicaCount == 1:
+
+			# Distributed layout
+			for brick_name in self.brick_order:
+				brick_info = self.brick[brick_name].printBrick()
+				print (" "*offset + "|\n" + " "*offset + "+--" + brick_info)
+
+		else:
+
+			# Replicated volume
+			repl_set = 0
+			num_repl_sets = len(self.replica_set)
+			link_char = "|"
+			for replica_set in self.replica_set:
+
+				if repl_set == (num_repl_sets -1):
+					link_char = " "
+
+				print (" "*offset + "|\n" + " "*offset + "+-- Repl Set "
+						+ str(repl_set) + " (afr)" )
+				padding = " "*offset + link_char + "     "
+				for brick_path in replica_set:
+					brick_info = self.brick[brick_path].printBrick()
+					print (padding + "|\n" + padding + "+--" + brick_info)
+				repl_set += 1
+		print
+
+
 			
+
+		
 
 
 class Brick:
@@ -774,6 +853,27 @@ class Brick:
 			else:
 				
 				self.mount_options[opt] = True
+
+	def printBrick(self):
+		""" provide an overview of this brick for display """
+
+		state = "UP" if self.up else "DOWN"
+
+		if self.heal_count > 0:
+				heal_string = "S/H Backlog %d"%(self.heal_count)
+		else:
+				heal_string = ""
+
+		fmtd = ("%s(%s) %s/%s %s"
+				%(self.brick_path, state,
+				displayBytes(self.used),
+				displayBytes(self.size),
+				heal_string))
+
+
+		return fmtd
+
+
 
 def getAttr(element,match_list):
 	""" function to convert an xml node element with attributes, to a dict """
