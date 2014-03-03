@@ -1,6 +1,6 @@
 Name:		gstatus
 Version:	0.3
-Release:	0.1%{?dist}
+Release:	0.2%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
@@ -10,6 +10,7 @@ Source0:	https://forge.gluster.org/gstatus/gstatus/archive-tarball/v%{version}#/
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires:	python2-devel
+BuildRequires:	python-setuptools
 Requires:	/usr/sbin/gluster
 Requires:	glusterfs >= 3.4
 
@@ -54,5 +55,8 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Mar 3 2014 Niels de Vos <ndevos@redhat.com> - 0.3-0.2
+- Fix building in mock, add BuildRequires python-setuptools
+
 * Mon Mar 3 2014 Niels de Vos <ndevos@redhat.com> - 0.3-0.1
 - Initial packaging
