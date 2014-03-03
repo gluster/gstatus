@@ -23,9 +23,9 @@ import 	re
 import 	xml.etree.ElementTree 	as 	ETree
 from 	decimal import *
 
-from 	functions.syscalls	import 	issueCMD
-from 	functions.network	import	portOpen, isIP, IPtoHost
-from 	functions.utils		import 	displayBytes
+from 	gstatus.functions.syscalls	import 	issueCMD
+from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost
+from 	gstatus.functions.utils		import 	displayBytes
 
 #
 #

@@ -24,9 +24,9 @@
 from 	optparse 	import OptionParser			# command line option parsing
 import 	os
 
-from functions.syscalls	import issueCMD
-from functions.utils	import displayBytes
-from classes.gluster	import Cluster, Volume, Brick
+from gstatus.functions.syscalls	import issueCMD
+from gstatus.functions.utils	import displayBytes
+from gstatus.classes.gluster	import Cluster, Volume, Brick
 
 MIN_VERSION = 3.4
 
