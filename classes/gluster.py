@@ -306,6 +306,9 @@ class Cluster:
 	def healthChecks(self):
 		""" perform checks on elements that affect the reported state of the cluster """
 		
+		# The idea here is to perform the most significant checks first
+		# so the message list appears in a priority order
+		
 		vol_msgs = []
 		# 1. volumes in a down or partial state
 		for volume_name in self.volume:
@@ -566,7 +569,7 @@ class Volume:
 				# print "DEBUG --> node attributes count is " + str(node_attributes)
 				
 				if node_attributes == 12:
-					# All good this is right
+					# All good this ... is right
 					pass
 					
 				elif node_attributes <=3:
@@ -574,11 +577,18 @@ class Volume:
 					# This is a gluster bug that I'm working around. When a node is
 					# down, you get a node element inside a node element (all
 					# node elements should be children of volume element!)
-					child = child.find('./node')
 					# print "DEBUG - adjusting element"
+					child = child.find('./node')
+					
+					# this will fire when the last node is down 
+					if not child:
+						#print "DEBUG - no node element"
+						continue
+						
+
 					
 				elif node_attributes <12:
-					# print "DEBUG --> skipping stanza"
+					print "DEBUG --> skipping stanza"
 					continue
 					
 				node_info = {}
