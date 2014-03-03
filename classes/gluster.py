@@ -580,9 +580,15 @@ class Volume:
 					# print "DEBUG - adjusting element"
 					child = child.find('./node')
 					
+					# FIXME - this needs to traverse, gluster is placing the missing nodes
+					# in a nested fashion
+					
+					
+					# print "adjusted child has " + str(len(child.getchildren())) + " elements"
+					
 					# this will fire when the last node is down 
-					if not child:
-						#print "DEBUG - no node element"
+					if not child or len(child.getchildren()) < 12:
+						# print "DEBUG - no node element"
 						continue
 						
 
