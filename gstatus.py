@@ -109,7 +109,7 @@ def main():
 				print "  - " + info
 				
 		else:
-			print "  - Cluster is healthy, all checks successful"
+			print "  - Cluster is HEALTHY, all checks successful"
 
 	print
 
