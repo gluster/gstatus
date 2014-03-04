@@ -67,6 +67,9 @@ class Cluster:
 		self.raw_capacity = 0
 		self.usable_capacity = 0
 		self.messages = []
+									# flag showing whether the cluster
+		self.name_based = self.namedVols()		
+									# was formed based on name or IP
 		
 		self.status = "healthy"				# be optimistic at first :)	
 		
@@ -82,10 +85,13 @@ class Cluster:
 		# down
 		#		all nodes in the cluster are down
 								
+								
+								
 	
 	def initialise(self):
 		""" call the node, volume 'generator' to create the child objects 
 			(bricks are created within the volume logic) """
+		
 		
 		self.defineNodes()
 
@@ -136,7 +142,7 @@ class Cluster:
 				# Note all nodes respond with a hostname, some give an 
 				# IP address - so for consistency catch the IP address
 				# and convert it to a name
-				if isIP(node_info['hostname']):
+				if isIP(node_info['hostname']) and self.name_based:
 					host_name = IPtoHost(node_info['hostname'])
 					node_info['hostname'] = host_name
 				
@@ -264,6 +270,14 @@ class Cluster:
 		""" return the version of gluster """
 		(rc, versInfo) = issueCMD("gluster --version")
 		return versInfo[0].split()[1]
+		
+	def namedVols(self):
+		""" Look at the vol files and determine whether they are name
+			based, returning a boolean to the caller """
+		
+		response = True
+		
+		return response
 	
 	def glfsVersionOK(self, min_version):
 		
@@ -432,7 +446,7 @@ class Cluster:
 		for sh_node in self_heal_list:
 			node_name = sh_node.find('./path').text
 			
-			if isIP(node_name):
+			if isIP(node_name) and self.name_based:
 				node_name = IPtoHost(node_name)
 				
 			node_state = sh_node.find('./status').text
