@@ -309,30 +309,27 @@ class Cluster:
 		# The idea here is to perform the most significant checks first
 		# so the message list appears in a priority order
 		
-		vol_msgs = []
 		# 1. volumes in a down or partial state
 		for volume_name in self.volume:
 			this_volume = self.volume[volume_name]
 			
 			if 'down' in this_volume.volume_state:
-				vol_msgs.append("Volume '%s' is down"%(volume_name))
+				self.messages.append("Volume '%s' is down"%(volume_name))
+				self.status = 'unhealthy'
 				
 			if 'partial' in this_volume.volume_state:
-				vol_msgs.append("Volume '%s' is in a PARTIAL state, some data is inaccessible data, due to missing bricks"%(volume_name))
-				vol_msgs.append("WARNING -> Write requests may fail against volume '%s'"%(this_volume.name))				
-								
-			if vol_msgs:
-				self.status = 'unhealthy'
-				# add the volume related error messages to the cluster message list
-				self.messages += vol_msgs
-				
+				self.messages.append("Volume '%s' is in a PARTIAL state, some data is inaccessible data, due to missing bricks"%(volume_name))
+				self.messages.append("WARNING -> Write requests may fail against volume '%s'"%(this_volume.name))				
+				self.status = 'unhealthy'								
+		
+		
 		
 		# 2. nodes that are down
 		for node_name in self.node:
 			this_node = self.node[node_name]
 			if this_node.state != '1':
 				self.messages.append("Cluster node '%s' is down"%(node_name))
-				self.status = 'unhealthy'		
+				self.status = 'unhealthy'
 		
 		# 3. check the bricks
 		for brick_name in self.brick:
@@ -343,11 +340,10 @@ class Cluster:
 			if not this_brick.up:
 				self.messages.append("Brick %s in volume '%s' is down/unavailable"%(brick_name, this_brick.owning_volume))
 			
-			# 3.2 check for best practice
+			# 3.2 check for best practice goes here (minor error messages - FUTURE)
 			
 			
 		# 4. Insert your checks HERE!
-		
 		
 
 		
@@ -378,29 +374,28 @@ class Cluster:
 		"""
 		
 		sys.stdout.write("Updating volume information"+" "*20+"\n\r\x1b[A")
-		
-		
-		(rc, vol_status) = issueCMD("gluster vol status all detail --xml")
-		
-		if rc > 0:
-			# unable to get updates from a vol status command
-			self.messages.append('Unable to retrieve volume status information')
-			return
-			
-		xml_string = ''.join(vol_status)
-		xml_root = ETree.fromstring(xml_string)
-		
-		vol_elements = xml_root.findall('.//volume')
-		
-		# print "DEBUG --> " + str(len(vol_elements))
-		
-		for vol_object in vol_elements:
-			
-			volume_name = vol_object.find('./volName').text
-			
+
+		# Process all volumes known to the cluster
+		for volume_name in self.volume:
+
+			# WORKAROUND
+			# The code issues n vol status requests because issueing a vol status
+			# wih the 'all' parameter can give bad xml when nodes are not
+			# present in the cluster. By stepping through each volume, the 
+			# xml, while still buggy can be worked around
+
+			(rc, vol_status) = issueCMD("gluster vol status %s detail --xml"%(volume_name))
+			if rc > 0:
+				# Unable to get the status of the volume
+				self.messages.append('Unable to retrieve volume status info')
+				return
+
+			xml_string = ''.join(vol_status)
+			xml_obj = ETree.fromstring(xml_string)
+
 			# Update the volume, to provide capacity and status information
-			self.volume[volume_name].update(vol_object)
-			
+			self.volume[volume_name].update(xml_obj)
+
 	
 		# ---------------------------------------------------------------------
 		# Now we look at a vol status output, to examine the self-heal states	
@@ -548,8 +543,31 @@ class Volume:
 		# By default all these protocols are enabled by gluster
 		self.protocol = {'SMB':'on', 'NFS':'on','NATIVE':'on'}
 
-		
-		
+	def brickUpdate(self,brick_xml):
+		""" method to update a volume's brick"""
+
+		node_info = {}
+		for brick_info in brick_xml.getchildren():
+
+			# print "DEBUG setting " + brick_info.tag + " to " + brick_info.text
+			node_info[brick_info.tag] = brick_info.text
+
+		brick_path = node_info['hostname'] + ":" + node_info['path']
+		brick_state = True if node_info['status'] == '1' else False
+		this_brick = self.brick[brick_path]
+
+		# update this brick
+		this_brick.update(brick_state,
+						int(node_info['sizeTotal']),
+						int(node_info['sizeFree']),
+						node_info['fsName'],
+						node_info['device'],
+						node_info['mntOptions'])
+
+		# Add this bricks capacity info to the volume's stats                                           
+		self.raw_capacity += int(node_info['sizeTotal'])
+		self.raw_used += int(node_info['sizeTotal']) - int(node_info['sizeFree'])
+
 
 	def update(self, volume_xml):
 		""" receive an xml document containing volume's attributes, process
@@ -557,74 +575,27 @@ class Volume:
 			brick information/state
 		"""
 		
-		#print "DEBUG --> Attempting to update volume " + self.name 
-			
-		# Step through the children of the volume element
-		for child in volume_xml.getchildren():
-			if child.tag == 'node':
-				
-				# a node element contains the brick information
-				node_attributes = len(child.getchildren())
-				
-				# print "DEBUG --> node attributes count is " + str(node_attributes)
-				
-				if node_attributes == 12:
-					# All good this ... is right
-					pass
-					
-				elif node_attributes <=3:
-					# WORKAROUND
-					# This is a gluster bug that I'm working around. When a node is
-					# down, you get a node element inside a node element (all
-					# node elements should be children of volume element!)
-					# print "DEBUG - adjusting element"
-					child = child.find('./node')
-					
-					# FIXME - this needs to traverse, gluster is placing the missing nodes
-					# in a nested fashion
-					
-					
-					# print "adjusted child has " + str(len(child.getchildren())) + " elements"
-					
-					# this will fire when the last node is down 
-					if not child or len(child.getchildren()) < 12:
-						# print "DEBUG - no node element"
-						continue
-						
+		# print "DEBUG --> Attempting to update volume " + self.name
 
-					
-				elif node_attributes <12:
-					print "DEBUG --> skipping stanza"
-					continue
-					
-				node_info = {}
-				correct_XML = False
-				for brick_info in child.getchildren():
-					
-					# print "DEBUG setting " + brick_info.tag + " to " + brick_info.text
-					
-					node_info[brick_info.tag] = brick_info.text
-					correct_XML = True
-					
-				if correct_XML:
-					brick_path = node_info['hostname'] + ":" + node_info['path']
-					
-					brick_state = True if node_info['status'] == '1' else False
-				
-					this_brick = self.brick[brick_path]
-					
-					# update this brick
-					this_brick.update(brick_state,
-							int(node_info['sizeTotal']),
-							int(node_info['sizeFree']),
-							node_info['fsName'],
-							node_info['device'],
-							node_info['mntOptions'])
-						
-					self.raw_capacity += int(node_info['sizeTotal'])
-					self.raw_used += int(node_info['sizeTotal']) - int(node_info['sizeFree'])
+		node_elements = volume_xml.findall('.//node')
+		# print "DEBUG --> this volume xml has %d node elements"%(len(node_elements))
+		
+		for node in node_elements:
+			sub_element_count = len(node.getchildren())
 			
-
+			# for a good node definition, there are child elements but the 
+			# number of elements varies by gluster version
+			# Version 3.4 ... 11 sub elements of <node>
+			# Version 3.5 ... 12 sub elements of <node> 3.5 adds a 'peerid' child element
+			if sub_element_count >= 11:
+				# print "DEBUG --> Updating a brick"
+				self.brickUpdate(node)
+			else:
+				# Skipping this node element since it doesn't have child elements
+				# and is therefore malformed xml
+				pass
+				# print "DEBUG --> skipping a node element"
+		
 		# ----------------------------------------------------------------
 		# Brick info has been updated, we can calculate the volume capacity
 		# ----------------------------------------------------------------		
