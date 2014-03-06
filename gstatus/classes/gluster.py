@@ -20,8 +20,10 @@
 import 	os
 import 	sys
 import 	re
+import 	glob
 import 	xml.etree.ElementTree 	as 	ETree
 from 	decimal import *
+
 
 from 	gstatus.functions.syscalls	import 	issueCMD
 from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost
@@ -29,17 +31,19 @@ from 	gstatus.functions.utils		import 	displayBytes
 
 #
 #
-#  
-#		   1       M 	
-#	Cluster-------- Volume
-#   1 |               	| 1
-#	  |					| 
-#     |				    |
-#	  |				   	|
-#     |					|
-#     |					|
-#	  |	  				|
-#	M | 				| M
+# Object Model 
+#
+#          1           M 	
+#   Cluster---------- Volume
+#   1 |\                | 1
+#     |  \              | 
+#     |    \            | 
+#     |      \          | 
+#     |        \        | 
+#     |          \      | 
+#     |            \    | 
+#     |              \  | 
+#   M |                \| M
 #	 Node ------------Brick
 #		  1			M
 #
@@ -60,7 +64,11 @@ class Cluster:
 		self.glfs_version = ''	# version, or mixed
 		self.msgs=[]
 		self.node={}
+		self.node_names = []	# list of node names populated from the 
+								# queryVolFiles method
 		self.nodes_down = 0
+		self.localhost = ''		# name of the current host running the 
+								# tool from gluster's perspective
 		self.volume={}
 		self.brick={}
 		self.glfs_version = self.getVersion()
@@ -68,7 +76,8 @@ class Cluster:
 		self.usable_capacity = 0
 		self.messages = []
 									# flag showing whether the cluster
-		self.name_based = self.namedVols()		
+		self.name_based = True	
+		self.has_volumes = False	
 									# was formed based on name or IP
 		
 		self.status = "healthy"				# be optimistic at first :)	
@@ -92,16 +101,29 @@ class Cluster:
 		""" call the node, volume 'generator' to create the child objects 
 			(bricks are created within the volume logic) """
 		
-		
-		self.defineNodes()
+		self.queryVolFiles()			# populate node names and type
+										# by looking at the vol files
+	
+		# has_volumes is defined in the queryVolFiles call, so the logic 
+		# here is that if we have seen vol files, then it's ok to
+		# run the queries to define the node and volume objects
+		if self.has_volumes:
+			
+			self.defineNodes()
 
-		# check if this host is active, if not we can't continue.
-		local_node = os.environ['HOSTNAME'].split('.')[0]
-		if self.node[local_node].state != '1':
-			print "gstatus can not contact the local gluster daemon, and can not continue.\n"
+			self.defineVolumes()
+			
+		else:
+			# no volumes in this cluster, print a message and abort
+			print "This cluster doesn't have any volumes/daemons running."
+			print "The output below shows the current nodes attached to this host.\n"
+			(rc, peers) = issueCMD('gluster pool list')
+			for line in peers:
+				print line
+			print
 			exit(12)
 
-		self.defineVolumes()
+
 
 
 	def defineNodes(self):
@@ -109,48 +131,81 @@ class Cluster:
 		
 		sys.stdout.write("Processing nodes"+" "*20+"\n\r\x1b[A")
 		
-		# We're using a peer status NOT pool list to determine cluster 
-		# membership, so the first thing to do is create a node object for 
-		# the localhost
-		hostname = os.environ['HOSTNAME'].split('.')[0]
+		(rc, peer_list) = issueCMD('gluster peer status --xml')
 		
-		# grab the uuid for the host the tool is running on
-		uuid = open('/var/lib/glusterd/glusterd.info').readlines()[0].strip()
-		
-		connected = '1' if portOpen('localhost',24007) else '0'
-		
-		new_node = Node(hostname,uuid,connected)	# assuming local node is actually working!
+		if rc > 0:
+			print "gluster did not respond to a peer status request, gstatus"
+			print "can not continue.\n"
+			exit(12)
 
-		self.node[hostname] = new_node
+		# at this point the peer status worked, so lets process the list 
+		# of nodes, comparing them against the source of truth aka the 
+		# volfile :) This is necessary, since a peer status and pool list
+		# doesn't return the same output on every node, IP addresses can 
+		# appear in the output even though the peer probes were all done
+		# by name!.
 		
-		
-		# define the fields that we're interested in 
+		#define the fields that we're interested in 
 		field_list = ['hostname','uuid','connected']
 		
-		# Issue the command to get the list of peers in the cluster
-		# and set up the node objects
-		(rc, peer_list) = issueCMD('gluster peer status --xml')
-		if rc == 0:
-			xml_string = ''.join(peer_list)
-			xml_root = ETree.fromstring(xml_string)
+		# create a copy of the nodes as discovered from the volfile(s)
+		valid_nodes = list(self.node_names)
+		
+		xml_string = ''.join(peer_list)
+		xml_root = ETree.fromstring(xml_string)
 
-			peer_list = xml_root.findall('.//peer')
-			for peer in peer_list:
+		peer_list = xml_root.findall('.//peer')
+		
+		# peer list will be cluster_size - 1 elements, since localhost is not used
+		# by matching on these peers, and removing matched names from a 
+		# a list, the remaining name from the reference list - derived from
+		# the volfile(s) - has got to be the localhost ip
+		
+		for peer in peer_list:
+			
+			node_info = getAttr(peer,field_list)
+			this_hostname = node_info['hostname']
+			add_node = False
+			if this_hostname in valid_nodes:
+				add_node = True
+				#
+			elif isIP(this_hostname) and self.name_based:
+				# try to change the IPaddr to a hostname
+				replacement_name = IPtoHost(this_hostname)
+				if replacement_name in valid_nodes:
+					this_hostname = replacement_name
+					add_node = True
+				else:
+					print "gstatus is unable to resolve peer name of %s"%(this_hostname)
+					print "and can not continue.\n"
+					exit(12)
 				
-				node_info = getAttr(peer,field_list)
 				
-				# Note all nodes respond with a hostname, some give an 
-				# IP address - so for consistency catch the IP address
-				# and convert it to a name
-				if isIP(node_info['hostname']) and self.name_based:
-					host_name = IPtoHost(node_info['hostname'])
-					node_info['hostname'] = host_name
-				
-				new_node = Node(node_info['hostname'],
-						node_info['uuid'],
-						node_info['connected'])
-						
-				self.node[node_info['hostname']] = new_node
+			if add_node:
+				# 
+				new_node = Node(this_hostname,
+								node_info['uuid'],
+								node_info['connected'])
+				self.node[this_hostname] = new_node
+				valid_nodes.remove(this_hostname)				
+		
+		# that's the remote nodes created, now for the localhost
+		local_uuid = open('/var/lib/glusterd/glusterd.info').readlines()[0].strip()
+		local_connected = '1' if portOpen('localhost',24007) else '0'
+		if len(valid_nodes) == 1:
+			local_hostname = valid_nodes[0]			# take what's left
+			self.localhost = local_hostname
+			new_node = Node(local_hostname,
+							local_uuid,
+							local_connected)
+			self.node[local_hostname] = new_node
+			
+		else:
+			print "Too many peers were not resolved when creating node"
+			print "objects. gstatus can not continue.\n"
+			exit(12)
+			
+
 		
 		
 
@@ -245,23 +300,23 @@ class Cluster:
 			# is replicated and hasn't had self-heal explicitly disabled the
 			# self heal state is inferred against the nodes that contain the 
 			# bricks for the volume. With this state in place, the updateState
-			# method can cross check to see what is actually happening
+			# method can cross-check to see what is actually happening
 
 			if 'replicate' in new_volume.typeStr.lower():
 				
-				enable_self_heal = False		# assume it's off
+				heal_enabled = True						# assume it's on
 					
 				if 'cluster.self-heal-daemon' in new_volume.options:
-					if new_volume.options['cluster.self-heal-daemon'].lower() in ['on','true']:
-						enable_self_heal = True
-				else:
-					# replicated volume, without a self-heal-daemon setting - default is ON
-					enable_self_heal = True
+					if new_volume.options['cluster.self-heal-daemon'].lower() in ['off','false']:
+						heal_enabled = False
 
-				if enable_self_heal:
+				new_volume.self_heal_enabled = heal_enabled
+
+				if heal_enabled:
+					
 					for brick_path in new_volume.brick:
+						
 						(hostname,brick_fsname) = brick_path.split(':')
-						#new_volume.brick[brick_path].self_heal_enabled = True
 						self.node[hostname].self_heal_enabled = True
 						
 
@@ -271,14 +326,36 @@ class Cluster:
 		(rc, versInfo) = issueCMD("gluster --version")
 		return versInfo[0].split()[1]
 		
-	def namedVols(self):
+	def queryVolFiles(self):
 		""" Look at the vol files and determine whether they are name
 			based, returning a boolean to the caller """
 		
-		response = True
+		ip_ctr, named_ctr = 0, 0
 		
-		return response
-	
+		# use glob to find the vol files
+		vol_files = glob.glob('/var/lib/glusterd/vols/*/trusted-*-fuse.vol')
+		
+		if vol_files:
+			self.has_volumes = True
+		
+			# get a list of unique remote host names used in the vol files
+			hosts = set([l.strip().split()[2] for f in vol_files 
+						for l in open(f).readlines() if 'remote-host' in l])
+			
+			# Hopefully all the hosts will be either named or IP's not a mix
+			# but if not, we'll side with the majority!			
+			for hostname in hosts:
+				if isIP(hostname):
+					ip_ctr += 1
+				else:
+					named_ctr += 1
+		
+			self.node_names = list(hosts)
+		
+		self.name_based = True if named_ctr >= ip_ctr else False
+
+		
+
 	def glfsVersionOK(self, min_version):
 		
 		(min_major, min_minor) = str(min_version).split('.')
@@ -388,83 +465,108 @@ class Cluster:
 		"""
 		
 		sys.stdout.write("Updating volume information"+" "*20+"\n\r\x1b[A")
-
+		
+		# WORKAROUND
+		# The code issues n vol status requests because issueing a vol status
+		# wih the 'all' parameter can give bad xml when nodes are not
+		# present in the cluster. By stepping through each volume, the 
+		# xml, while still buggy can be worked around
 		# Process all volumes known to the cluster
 		for volume_name in self.volume:
-
-			# WORKAROUND
-			# The code issues n vol status requests because issueing a vol status
-			# wih the 'all' parameter can give bad xml when nodes are not
-			# present in the cluster. By stepping through each volume, the 
-			# xml, while still buggy can be worked around
-
-			(rc, vol_status) = issueCMD("gluster vol status %s detail --xml"%(volume_name))
-			if rc > 0:
-				# Unable to get the status of the volume
-				self.messages.append('Unable to retrieve volume status info')
-				return
-
-			xml_string = ''.join(vol_status)
-			xml_obj = ETree.fromstring(xml_string)
-
-			# Update the volume, to provide capacity and status information
-			self.volume[volume_name].update(xml_obj)
-
 	
-		# ---------------------------------------------------------------------
-		# Now we look at a vol status output, to examine the self-heal states	
-		# ---------------------------------------------------------------------			
-		(rc, vol_status) = issueCMD("gluster vol status --xml")
-		if rc > 0:
-			# unable to get updates from a vol status command
-			self.messages.append('Unable to retrieve volume status information')
-			return
-			
-		xml_string = ''.join(vol_status)
-		xml_root = ETree.fromstring(xml_string)
-		
-		self_heal_list = []
-		
-		node_elements = xml_root.findall('.//node')
-		# print "DEBUG --> node elements in vol status is " + str(len(node_elements))
-		
-		# first get a list of self-heal elements from the xml
-		for node in node_elements:
-			
-			# WORKAROUND
-			# there's a big in 3.4, where when a node is missing the xml returned is malformed
-			# returning a node within a node so we can't use the normal findall method to 
-			# provide a list of node elements to cycle through			
-			if node.find('./node'):
-				continue
-		
+			# 'status' is set from a vol info command. This will show whether the
+			# vol is created (0), started (1), or stopped (2). We're only interested
+			# in the started state, when issuing the vol status	command
+			if self.volume[volume_name].status == 1:
 				
-			if node.find('./hostname').text == 'Self-heal Daemon':
-				self_heal_list.append(node)
-				
-		# Process the list, updating the node's self-heal state
-		for sh_node in self_heal_list:
-			node_name = sh_node.find('./path').text
+				(rc, vol_status) = issueCMD("gluster vol status %s detail --xml"%(volume_name))
 			
-			if isIP(node_name) and self.name_based:
-				node_name = IPtoHost(node_name)
-				
-			node_state = sh_node.find('./status').text
+				# Need to check opRet element since for xml based gluster commands
+				# do NOT pass a return code back to the shell!
+				gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
+								for line in vol_status if 'opRet' in line][0])
 			
-			node_name = os.environ['HOSTNAME'].split('.')[0] if node_name == 'localhost' else node_name
+				if gluster_rc == 0:
+					xml_string = ''.join(vol_status)
+					xml_obj = ETree.fromstring(xml_string)
 
-			if node_state == '1':
-				self.node[node_name].self_heal_active = True
-			else:
-				self.node[node_name].self_heal_active = False
-		
-		# Propagate the self heal states to the clusters volume(s)
-		for vol_name in self.volume:
-			this_vol = self.volume[vol_name]
-			this_vol.updateSelfHeal()		# update based on flags
-			this_vol.querySelfHeal()		# update vol state if heal is working
+					# Update the volume, to provide capacity and status information
+					self.volume[volume_name].update(xml_obj)					
 			
-			this_state = this_vol.volume_state
+				else:
+					# bad response from the vol status, so skip to the 
+					# next volume - leaving these value at their initialised 
+					# state
+					continue
+				
+				# ---------------------------------------------------------------------
+				# The volume is in a started state, so look for self-heal
+				# information - if this volume actually has self heal enabled!
+				# ---------------------------------------------------------------------			
+				if self.volume[volume_name].self_heal_enabled:
+					
+					sys.stdout.write("Analysing Self Heal daemons"+" "*20+"\n\r\x1b[A")
+					(rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
+					gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
+								for line in vol_status if 'opRet' in line][0])
+				
+					if gluster_rc == 0:
+			
+						xml_string = ''.join(vol_status)
+						xml_root = ETree.fromstring(xml_string)
+					
+						self_heal_list = []
+					
+						node_elements = xml_root.findall('.//node')
+						# print "DEBUG --> node elements in vol status is " + str(len(node_elements))
+					
+						# first get a list of self-heal elements from the xml
+						for node in node_elements:
+						
+							# WORKAROUND
+							# there's a big in 3.4, where when a node is missing 
+							# the xml returned is malformed returning a node 
+							# within a node so we need to check the subelements 
+							# to see if they're valid. 
+							if node.find('./node'):
+								continue
+						
+								
+							if node.find('./hostname').text == 'Self-heal Daemon':
+								node_name = node.find('./path').text
+								node_state = node.find('./status').text
+								
+								if node_name == 'localhost':
+									node_name = self.localhost
+	
+								elif isIP(node_name) and self.name_based:
+									
+									# WORKAROUND
+									# gluster's self info sometimes puts an IP not
+									# name as the hostname, so we need to catch that 
+									# and correct it if possible
+									resolved_name = IPtoHost(node_name)	
+									if resolved_name in self.node_names:
+										node_name = resolved_name
+									else:
+										# tried to resolve the IP, but the name
+										# doesn't tally with our cluster nodes
+										print "gstatus has been given an IP address for a self-heal daemon that"
+										print "does not correspond to a cluster node name, and can not continue\n"
+										exit(16)
+										
+			
+								if node_state == '1':
+									self.node[node_name].self_heal_active = True
+								else:
+									self.node[node_name].self_heal_active = False
+
+					# update the self heal flags, based on the vol status
+					self.volume[volume_name].updateSelfHeal()
+					
+					
+		
+			this_state = self.volume[volume_name].volume_state
 			
 			if this_state == 'up':
 				self.volume_summary['up'] += 1
@@ -497,7 +599,7 @@ class Node:
 		self.node_name = node
 		self.uuid=uuid
 		self.state=state		# index for node_state dict
-		self.state_text = Node.node_state[state]
+		# self.state_text = Node.node_state[state]
 		self.brick = {}
 		self.daemon_state = {}
 		self.local=False		# is this the localhost?
@@ -519,9 +621,9 @@ class Volume:
 	volume_states = ['unknown','up', 'down','up(partial)', 'up(degraded)']
 	
 	# declare the attributes that we're interested in from the vol info output
-	volume_attr = ['name', 'status', 'type', 'typeStr', 'replicaCount']
+	volume_attr = ['name', 'status', 'statusStr', 'type', 'typeStr', 'replicaCount']
 
-	# status - 1=started, 2 = stopped
+	# status - 0=created, 1=started, 2 = stopped
 	#
 	# type - 5 = dist-repl
 
@@ -551,9 +653,10 @@ class Volume:
 		self.pct_used = 0
 		self.nfs_enabled = True
 		self.self_heal_enabled = False
-		self.self_heal_string = ''
+		self.self_heal_string = 'N/A'
 		self.self_heal_active = False	# default to not active
-		self.self_heal_count = 0	# no. files being current healed
+		self.self_heal_count = 0		# no. files being tracked for self heal
+		
 		# By default all these protocols are enabled by gluster
 		self.protocol = {'SMB':'on', 'NFS':'on','NATIVE':'on'}
 
@@ -612,6 +715,8 @@ class Volume:
 		
 		# ----------------------------------------------------------------
 		# Brick info has been updated, we can calculate the volume capacity
+		# but the volume needs to up at least partially up for the vol status 
+		# to return information.
 		# ----------------------------------------------------------------		
 
 		(up_bricks, total_bricks) = self.brickStates()
@@ -703,17 +808,48 @@ class Volume:
 		# set the state string to "not applicable"
 		if 'replicate' not in self.typeStr.lower():
 			self.self_heal_string = 'N/A'
+			return
 			
-		# so it's replicated, but is self-heal disabled?	
-		elif 'cluster.self-heal-daemon' in self.options:
+		# is self-heal is disabled by option
+		if 'cluster.self-heal-daemon' in self.options:
 			if self.options['cluster.self-heal-daemon'].lower() in ['off','false']:
 				self.self_heal_string = 'DISABLED'
-			else:
-				self.self_heal_string = self.calcSelfHealStr()
-		else:
-			self.self_heal_string = self.calcSelfHealStr()
+				return
+				
+		self.self_heal_string = self.getSelfHealStats()
+		
+		sys.stdout.write("Analysing Self Heal backlog"+" "*20+"\n\r\x1b[A")
+		
+		# On gluster 3.4 & 3.5 vol heal with --xml is not supported so parsing
+		# has to be done the old fashioned way :)
+		(rc, vol_heal_output) = issueCMD("gluster vol heal %s info"%(self.name))
+
+		if rc == 0:
 			
-	def calcSelfHealStr(self):
+			total_heal_count = 0
+			
+			for line in vol_heal_output:
+				line = line.lower()			# drop to lower case for consistency
+				
+				if line.startswith('brick'):
+					brick_path = line.split()[1]
+				if  line.startswith('number'):
+					heal_count = int(line.split(':')[1])
+					self.brick[brick_path].heal_count = heal_count
+					total_heal_count += heal_count
+						
+			self.self_heal_count = total_heal_count
+			if total_heal_count > 0:
+				self.self_heal_string += "   Heal backlog of %d files"%(total_heal_count)
+			else:
+				self.self_heal_string += "   All files in sync"
+			
+		else:
+			# vol heal command failed - just flag the problem
+			self.self_heal_string += " BACKLOG DATA UNAVAILABLE"
+
+			
+	def getSelfHealStats(self):
 		""" return a string active/enable self heal states for the
 			nodes that support this volume """
 			
@@ -729,34 +865,6 @@ class Volume:
 				active += 1
 			
 		return "%2d/%2d"%(active, enabled)
-
-	def querySelfHeal(self):
-		""" issue a gluster command to check whether self heal is active
-			on this volume. """
-			
-		# On gluster 3.4 --xml is not supported so parsing
-		# has to be done the old fashioned way :)"""
-		
-		(rc, vol_heal_output) = issueCMD("gluster vol heal %s info"%(self.name))
-		
-		if rc == 0:
-			
-			total_heal_count = 0
-			
-			for line in vol_heal_output:
-				line = line.lower()			# drop to lower case
-				if line.startswith('brick'):
-					brick_path = line.split()[1]
-				if  line.startswith('number'):
-					heal_count = int(line.split(':')[1])
-					self.brick[brick_path].heal_count = heal_count
-					total_heal_count += heal_count
-						
-			self.self_heal_count = total_heal_count
-			
-		else:
-			# vol heal command failed - what should we do?
-			pass
 
 	def printLayout(self):
 		""" print function used to show the relationships of the bricks in

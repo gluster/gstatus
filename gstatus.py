@@ -47,8 +47,13 @@ def main():
 	active_self_heal = cluster.checkSelfHeal()
 	
 	cluster.healthChecks()
+	
+	if cluster.messages:
+		status_msg = "%s(%d)"%(cluster.status.upper(),len(cluster.messages))
+	else:
+		status_msg = cluster.status.upper()
 
-	print ("      Status: %s Capacity: %s(raw bricks)"%(cluster.status.upper().ljust(17),
+	print ("      Status: %s Capacity: %s(raw bricks)"%(status_msg.ljust(17),
 			displayBytes(cluster.raw_capacity,display_units)))
 		
 	print ("   Glusterfs: %s           %s(usable)\n"%(cluster.glfs_version.ljust(17),
@@ -88,7 +93,7 @@ def main():
 					%(vol.pct_used,
 					displayBytes(vol.used_capacity,display_units),
 					displayBytes(vol.usable_capacity,display_units)))
-				print ("\t" + " "*17 + "Self Heal: %s   Heal backlog:%d files"%(vol.self_heal_string, vol.self_heal_count))
+				print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string))
 				print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
 					%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
 					
