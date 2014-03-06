@@ -26,6 +26,19 @@ To Do List / Change Log
     - vol components, replica set relationships
   - fix - malformed xml from gluster showing bricks against wrong vols
 
+0.45 Complete 2014/03/06
+  - fix release
+    - node discovery now validated against initial brick list from a vol info
+      avoiding name issues (hopefully!)
+    - gstatus detects whether the cluster is name or ip based, and changes 
+      name resolution logic accordingly
+    - merged volume methods for calculating self heal states
+    - added code to check gluster command o/p return code (on vol status) since
+      --xml does not set shell return code ($?)
+  - New additions
+    - added a message count against the cluster state, to immediately show how
+      many errors a cluster may have i.e. UNHEALTHY(5) --> 5 errors found
+
 0.5 planned
   - add config file support
     - space usage triggers on volumes 
@@ -45,7 +58,7 @@ Known BUGS
 - invocation after a node down event will block vol status. This needs to be 
   detected and the run aborted to prevent the wrong information being shown to
   the user
-- gluster is not returning valid xml when nodes are not present in the config. The problem gets worse with cluster size, and disruption. Current testing has nly allowed 4 node tests to be performed.
+- gluster is not returning valid xml when nodes are not present in the config. The problem gets worse with cluster size, and disruption. Current testing has nly allowed 4 node tests to be performed. WORKED AROUND 0.4 onwards
 
 
 
