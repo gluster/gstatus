@@ -1,36 +1,32 @@
+                               GSTATUS
+                               =======
 
 Overview
 ========
-A gluster trusted pool (aka cluster), consists of several key components; nodes, volumes and bricks.At this point (version 3.4/3.5), there isn't a single command that can provide an overview of the cluster's health. This means that admins currently assess the cluster by looking at several commands to piece together a picture of the cluster's state.
+A gluster trusted pool (aka cluster), consists of several key components; 
+nodes, volumes and bricks. In glusterfs 3.4/3.5, there isn't a single command
+that can provide an overview of the cluster's health. This means that admins
+currently assess the cluster health by looking at several commands to piece
+together a picture of the cluster's state.
 
-This isn't ideal - so gstatus is an attempt to provide an easy to use, highlevel view of a clusters health through a single command. The tools gathers information by issuing gluster commands, to build an object model covering Nodes, Volumes and Bricks. With this data in place, checks are performed across this meta data and errors reported back to the user. In later releases, this data can be analysed in different ways to add further checks, incorporating deployment best practices etc.
+This isn't ideal - so 'gstatus' is an attempt to provide an easy to use,
+highlevel view of a cluster's health through a single command. The tool gathers
+information by issuing gluster commands, to build an object model covering
+Nodes, Volumes and Bricks. With this data in place, checks are performed across
+this meta data and errors reported back to the user. In later releases, this
+data could be analysed in different ways to add further checks, incorporating
+deployment best practices, freespace triggers etc.
 
 Pre-Requisites
-- glusterfs 3.4 or above
-  The tool issues commands to gluster using the --xml parameter. Scraping the output is another possibility, but by using the xml the code should be more stable and more easily extendable
+==============
++ glusterfs 3.4 or above
+  The tool issues commands to gluster using the --xml parameter. Scraping the
+  output is another possibility, but by using the xml option, the program 
+  should be more stable and more easily extendable
   
-- volume types
-  the initial release of gstatus support distributed and distributed-replicated volumes ONLY
-
-Volume States
-=============
-A gluster volume is made from individual filesystems (gluster bricks) across multiple nodes. From an end/user of application perspective, this complexity is abstracted but the status of individual bricks does have a bearing on the data availability of the volume. For example, even without replication the loss of a single brick in the volume will not cause the volume itself to be unavilable, but instead manifest as inaccessible files in the filesystem. 
-To make more sense of the impact the brick availability has to the volume presented to the application, the gstatus command introduces shome additional status descriptions, that define the volumes state in terms of data availability.
-
-ONLINE
-Volume is started and available, all bricks are online 
-
-ONLINE_DEGRADED
-This state is specific to replicated volumes, where at least one brick is down within a replica set. Access can continue, but the resilience of the volume, and potentially it’s performance is degraded. 
-
-ONLINE_PARTIAL
- Effectively this means that allthough some bricks in the volume are online, there are others that are down to a point where areas of the filesystem will be missing. For a distrubuted volume, this state is seen if any brick is offline, whereas for a replicated volume a complete replica set needs to be down. 
-
-OFFLINE
-Bricks are down, or unavailable 
-
-STOPPED
-Admin has stopped the volume 
++ volume types
+  the initial release of gstatus supports distributed and 
+  distributed-replicated volumes ONLY
 
 
 Dependencies
@@ -40,42 +36,143 @@ Dependencies
 - gluster version 3.4 or above
 
 
-
 Installation
 ============
-At this stage the code is available as a simple tar archive. To install the tool on your cluster follow these steps
-1. Grab the tar archive from the gluster forge (https://forge.gluster.org/gstatus)
-2. unpack the archive on one of the nodes (or all!) within your cluster
-   tar -xvzf <archive name>
-3. switch to the directory where you unpacked the archive, and run the gstatus.py script
+Installing the two can be done in two ways, through python-seuptools or simply
+by running the main script (gstatus.py) directly.
+
+* Using python-setuptools
+1. To install using this method extract the archive file
+   - tar xvzf gstatus.tar.gz
+2. cd to the gstatus directory
+3. run the setup.py program
+   - python setup.py install
+4. invoke the script
+   gstatus <options>
+
+This will install a hook for gstatus in /usr/bin so running the script doesn't
+need the .py extension.
+
+* running from the archive
+1. Extract the archive file
+   - tar xvzf gstatus.tar.gz
+2. cd to the gstatus directory
+3. invoke the script using
+   ./gstatus.py <options>
+
+
+
+Volume States
+=============
+A gluster volume is made from individual filesystems (gluster bricks) across 
+multiple nodes. From an end/user of application perspective, this complexity
+is abstracted but the status of individual bricks does have a bearing on the
+data availability of the volume. For example, even without replication the
+loss of a single brick in the volume will not cause the volume itself to be
+unavilable, but instead manifest as inaccessible files in the filesystem.
+ 
+To make more sense of the impact the brick availability has to the volume 
+presented to the application, the gstatus command introduces some additional 
+status descriptions, that define the volumes state in terms of data 
+availability.
+
+UP
+Volume is started and available, all bricks are up
+
+UP(Degraded)
+This state is specific to replicated volumes, where at least one brick is down
+within a replica set. Data is still 100% available due to the alternate
+replica(s),  but the resilience of the volume to further failures within the
+same replica set flags this volume as 'degraded'. 
+
+UP(Partial)
+Effectively this means that allthough some bricks in the volume are online, 
+there are others that are down to a point where areas of the filesystem will be
+missing. For a distrubuted volume, this state is seen if ANY brick is down, 
+whereas for a replicated volume a complete replica set needs to be down before
+the volume state transitions to PARTIAL. 
+
+DOWN
+Bricks are down, or the volume has not yet been started 
+
 
 Running the tool
 ================
+
 Running gstatus with a -h flag shows the following options;
 
-./gstatus.py -h
-Usage: gstatus.py [options]
+[root@glfs35-1 gstatus]# gstatus -h
+Usage: gstatus [options]
 
 Options:
   --version             show program's version number and exit
   -h, --help            show this help message and exit
-  -s, --status          Show highlevel health of the cluster
-  -v VOLUMES, --volume=VOLUMES
-                        Volume level view (NOT IMPLEMENTED YET!)
-  -a, --all             Show all cluster information
-  --xml                 produce output in XML format (NOT IMPLEMENTED YET!)
+  -s, --state           show highlevel health of the cluster
+  -v, --volume          volume info (default is ALL, or supply a volume name)
+  -a, --all             show all cluster information
+  -u UNITS, --units=UNITS
+                        display capacity units in DECimal or BINary format (GB
+                        vs GiB)
+  -l, --layout          show brick layout when used with -v, or -a
 
 
+* Understanding the output
+
+- Simply invoking gstatus without any options, will give a 2 line summary of
+  the cluster. This will tell you overall health, capacity and gluster version.
+  If there are issues detected in the cluster, the UNHEALTHY state will be 
+  suffixed by a number in brackets - the number documents the number of errors
+  detected within the cluster.
+
+- Using -a will show high level cluster elements, as well as volume information
+  You'll notice  that there are a number of what appear to be fractions listed
+  against items like Nodes, Bricks etc.
+
+  These fractions actually show you the current 'up' state against the 
+  potential up state. So a 'Node' field that shows 2/4, actually means the
+  cluster has 4 nodes, but only 2 are in an up state.
+
+  e.g.
+  [root@glfs35-1 gstatus]# gstatus -a
+ 
+        Status: HEALTHY           Capacity: 80.00 GiB(raw bricks)
+     Glusterfs: 3.5.0beta3                  60.00 GiB(usable)
+
+     Nodes    :  2/ 4		Volumes:  0 Up
+     Self Heal:  2/ 4		          1 Up(Degraded)
+     Bricks   :  6/ 8		          1 Up(Partial)
+                                          0 Down
+
+
+- Capacity information is derived from the brick information taken from a 
+  'vol status detail' command. The accuracy of this number therefore depends
+  on the nodes/bricks being all up - elements missing from the configuration
+  will simply be missing from the calculation.
+
+- running the tool with the -l flag (with -a, or -v) will show a line diagram
+  depicting the brick layout within the volume. This is a useful visualisation
+  and that when combined with the brick's state (up or down), gives you an
+  indication of the impact a brick down event has to data access within the 
+  volume. The idea itself is inspired by work of Fred van Zwieten and 
+  Niels De Vos in the 'lsgvt' project.
+
+
+The examples directory included in the archive contains a number of scenarios
+that show the behaviour of the script under different error conditions.
+
+ 
 Tested on
 =========
 - 4 node vm cluster, running Red Hat Storage 2.1 (RHEL 6.4, glusterfs 3.4)
+- 4 node vm cluster, based on RHEL 6.5 with upstream glusterfs 3.5 beta 3
 
 
 Known Issues
 ============
-1) invocation after a node down event will block vol status. This needs to be 
-   detected and the run aborted to prevent the wrong information being shown to
-   the user
+1) After a node is taken down, gluster uses a node timeout to confirm that the
+   node has actually gone. This causes the tool to appear to hang as this 
+   timeout is honoured in gluster, when the tool is invoked within 30secs of a
+   node shutdown.
 
 
  
