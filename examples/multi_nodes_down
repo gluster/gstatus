@@ -1,0 +1,60 @@
+[root@glfs35-1 gstatus]# gstatus
+ 
+      Status: UNHEALTHY(8)      Capacity: 40.00 GiB(raw bricks)
+   Glusterfs: 3.5.0beta3                  40.00 GiB(usable)
+
+      -------------------------------------------------------------------
+
+[root@glfs35-1 gstatus]# gstatus -s
+ 
+      Status: UNHEALTHY(8)      Capacity: 40.00 GiB(raw bricks)
+   Glusterfs: 3.5.0beta3                  40.00 GiB(usable)
+
+   Nodes    :  2/ 4		Volumes:  0 Up
+   Self Heal:  2/ 4		          1 Up(Degraded)
+   Bricks   :  4/ 8		          1 Up(Partial)
+                                          0 Down
+Status Messages
+  - Cluster is UNHEALTHY
+  - Volume 'dist' is in a PARTIAL state, some data is inaccessible data, due to missing bricks
+  - WARNING -> Write requests may fail against volume 'dist'
+  - Cluster node 'glfs35-3' is down
+  - Cluster node 'glfs35-2' is down
+  - Brick glfs35-3:/gluster/brick1 in volume 'myvol' is down/unavailable
+  - Brick glfs35-3:/gluster/brick2 in volume 'dist' is down/unavailable
+  - Brick glfs35-2:/gluster/brick1 in volume 'myvol' is down/unavailable
+  - Brick glfs35-2:/gluster/brick2 in volume 'dist' is down/unavailable
+
+      -------------------------------------------------------------------
+
+[root@glfs35-1 gstatus]# gstatus -a
+ 
+      Status: UNHEALTHY(8)      Capacity: 40.00 GiB(raw bricks)
+   Glusterfs: 3.5.0beta3                  40.00 GiB(usable)
+
+   Nodes    :  2/ 4		Volumes:  0 Up
+   Self Heal:  2/ 4		          1 Up(Degraded)
+   Bricks   :  4/ 8		          1 Up(Partial)
+                                          0 Down
+Volume Information
+	myvol            UP(DEGRADED) - 2/4 bricks up - Distributed-Replicate
+	                 Capacity: (0% used) 77.00 MiB/20.00 GiB (used/total)
+	                 Self Heal:  2/ 4   All files in sync
+	                 Protocols: glusterfs:on  NFS:off  SMB:off
+
+	dist             UP(PARTIAL)  - 2/4 bricks up - Distribute
+	                 Capacity: (0% used) 65.00 MiB/20.00 GiB (used/total)
+	                 Self Heal: N/A
+	                 Protocols: glusterfs:on  NFS:on  SMB:on
+
+Status Messages
+  - Cluster is UNHEALTHY
+  - Volume 'dist' is in a PARTIAL state, some data is inaccessible data, due to missing bricks
+  - WARNING -> Write requests may fail against volume 'dist'
+  - Cluster node 'glfs35-3' is down
+  - Cluster node 'glfs35-2' is down
+  - Brick glfs35-3:/gluster/brick1 in volume 'myvol' is down/unavailable
+  - Brick glfs35-3:/gluster/brick2 in volume 'dist' is down/unavailable
+  - Brick glfs35-2:/gluster/brick1 in volume 'myvol' is down/unavailable
+  - Brick glfs35-2:/gluster/brick2 in volume 'dist' is down/unavailable
+

@@ -1,0 +1,47 @@
+[root@glfs35-1 gstatus]# gstatus -v -l 
+ 
+      Status: HEALTHY           Capacity: 80.00 GiB(raw bricks)
+   Glusterfs: 3.5.0beta3                  60.00 GiB(usable)
+
+Volume Information
+	myvol            UP - 4/4 bricks up - Distributed-Replicate
+	                 Capacity: (0% used) 77.00 MiB/20.00 GiB (used/total)
+	                 Self Heal:  4/ 4   All files in sync
+	                 Protocols: glusterfs:on  NFS:off  SMB:off
+
+	myvol----------- +
+	                 |
+                Distribute (dht)
+                         |
+                         +-- Repl Set 0 (afr)
+                         |     |
+                         |     +--glfs35-1:/gluster/brick1(UP) 38.00 MiB/10.00 GiB 
+                         |     |
+                         |     +--glfs35-2:/gluster/brick1(UP) 38.00 MiB/10.00 GiB 
+                         |
+                         +-- Repl Set 1 (afr)
+                               |
+                               +--glfs35-3:/gluster/brick1(UP) 39.00 MiB/10.00 GiB 
+                               |
+                               +--glfs35-4:/gluster/brick1(UP) 39.00 MiB/10.00 GiB 
+
+
+	dist             UP - 4/4 bricks up - Distribute
+	                 Capacity: (0% used) 129.00 MiB/40.00 GiB (used/total)
+	                 Self Heal: N/A
+	                 Protocols: glusterfs:on  NFS:on  SMB:on
+
+	dist------------ +
+	                 |
+                Distribute (dht)
+                         |
+                         +--glfs35-1:/gluster/brick2(UP) 32.00 MiB/10.00 GiB 
+                         |
+                         +--glfs35-2:/gluster/brick2(UP) 32.00 MiB/10.00 GiB 
+                         |
+                         +--glfs35-3:/gluster/brick2(UP) 32.00 MiB/10.00 GiB 
+                         |
+                         +--glfs35-4:/gluster/brick2(UP) 32.00 MiB/10.00 GiB 
+
+
+

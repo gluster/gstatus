@@ -1,0 +1,48 @@
+[root@glfs35-1 gstatus]# gstatus 
+ 
+      Status: HEALTHY           Capacity: 80.00 GiB(raw bricks)
+   Glusterfs: 3.5.0beta3                  60.00 GiB(usable)
+
+
+
+           --------------------------------------------------------
+
+
+[root@glfs35-1 gstatus]# gstatus -s
+ 
+      Status: HEALTHY           Capacity: 80.00 GiB(raw bricks)
+   Glusterfs: 3.5.0beta3                  60.00 GiB(usable)
+
+   Nodes    :  4/ 4		Volumes:  2 Up
+   Self Heal:  4/ 4		          0 Up(Degraded)
+   Bricks   :  8/ 8		          0 Up(Partial)
+                                          0 Down
+Status Messages
+  - Cluster is HEALTHY, all checks successful
+
+           --------------------------------------------------------
+
+[root@glfs35-1 gstatus]# gstatus -a
+ 
+      Status: HEALTHY           Capacity: 80.00 GiB(raw bricks)
+   Glusterfs: 3.5.0beta3                  60.00 GiB(usable)
+
+   Nodes    :  4/ 4		Volumes:  2 Up
+   Self Heal:  4/ 4		          0 Up(Degraded)
+   Bricks   :  8/ 8		          0 Up(Partial)
+                                          0 Down
+Volume Information
+	myvol            UP - 4/4 bricks up - Distributed-Replicate
+	                 Capacity: (0% used) 77.00 MiB/20.00 GiB (used/total)
+	                 Self Heal:  4/ 4   All files in sync
+	                 Protocols: glusterfs:on  NFS:off  SMB:off
+
+	dist             UP - 4/4 bricks up - Distribute
+	                 Capacity: (0% used) 129.00 MiB/40.00 GiB (used/total)
+	                 Self Heal: N/A
+	                 Protocols: glusterfs:on  NFS:on  SMB:on
+
+Status Messages
+  - Cluster is HEALTHY, all checks successful
+
+
