@@ -169,6 +169,8 @@ class Cluster:
 			if this_hostname in valid_nodes:
 				add_node = True
 				#
+			elif not isIP(this_hostname) and self.name_based:
+				add_node = True
 			elif isIP(this_hostname) and self.name_based:
 				# try to change the IPaddr to a hostname
 				replacement_name = IPtoHost(this_hostname)
@@ -187,7 +189,8 @@ class Cluster:
 								node_info['uuid'],
 								node_info['connected'])
 				self.node[this_hostname] = new_node
-				valid_nodes.remove(this_hostname)				
+				if this_hostname in valid_nodes:
+					valid_nodes.remove(this_hostname)				
 		
 		# that's the remote nodes created, now for the localhost
 		local_uuid = open('/var/lib/glusterd/glusterd.info').readlines()[0].strip()
