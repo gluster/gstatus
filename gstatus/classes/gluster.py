@@ -541,7 +541,11 @@ class Cluster:
 								
 								if node_name == 'localhost':
 									node_name = self.localhost
-	
+								
+								# check for a node name that is fqdn	
+								elif '.' in node_name:
+									node_name = node_name.split('.')[0]
+									
 								elif isIP(node_name) and self.name_based:
 									
 									# WORKAROUND
@@ -833,9 +837,17 @@ class Volume:
 			
 			for line in vol_heal_output:
 				line = line.lower()			# drop to lower case for consistency
-				
+
 				if line.startswith('brick'):
-					brick_path = line.split()[1]
+					(node,path_name) = line.replace(':',' ').split()[1:]
+					
+					# 3.4.0.59 in RHS returning fqdn node names
+					if '.' in node:
+						node = node.split('.')[0]
+
+					# 3.4.0.59 adding trailing '/' to brick path
+					brick_path = node + ":" + path_name.rstrip('/')
+
 				if  line.startswith('number'):
 					heal_count = int(line.split(':')[1])
 					self.brick[brick_path].heal_count = heal_count
