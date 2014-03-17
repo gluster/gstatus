@@ -497,10 +497,14 @@ class Cluster:
 					self.volume[volume_name].update(xml_obj)					
 			
 				else:
-					# bad response from the vol status, so skip to the 
-					# next volume - leaving these value at their initialised 
-					# state
-					continue
+					# Being unable to get a vol status for a known volume
+					# may indicate a peer transitioning to disconnected state
+					# so issue an error message and abort the script
+					print "\n--> gstatus has been unable to query volume '" + volume_name + "'"
+					print "\nPossible cause: cluster is currently reconverging after a node"
+					print "has entered a disconnected state."
+					print "\nResponse: Rerun gstatus or issue a peer status command to confirm\n"
+					exit(16)
 				
 				# ---------------------------------------------------------------------
 				# The volume is in a started state, so look for self-heal
