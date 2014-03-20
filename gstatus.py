@@ -22,6 +22,7 @@
 #  
 #  
 from 	optparse 	import OptionParser			# command line option parsing
+from 	datetime	import datetime
 import 	os
 
 from gstatus.functions.syscalls	import issueCMD
@@ -34,19 +35,8 @@ MIN_VERSION = 3.4
 # if the checks are done right after a node down event, the vol status query does not
 # complete and ends up blocking on the originating node until the node timeout occurs.
 
-def main():
-	
-	print " "			# add some spacing to make the output stand out more
-	
-	cluster.initialise()
-	cluster.updateState()
-	cluster.calcCapacity()
-
-	active_nodes = cluster.activeNodes()
-	active_bricks = cluster.activeBricks()
-	active_self_heal = cluster.checkSelfHeal()
-	
-	cluster.healthChecks()
+def consoleMode():
+	""" Produce the output to the users console - stdout """
 	
 	if cluster.messages:
 		status_msg = "%s(%d)"%(cluster.status.upper(),len(cluster.messages))
@@ -62,15 +52,15 @@ def main():
 	if state_request:
 		
 		print ("   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
-				%(active_nodes,cluster.numNodes(),
+				%(cluster.nodes_active,cluster.node_count,
 				cluster.volume_summary['up']))
 
 		print ("   Self Heal: %2d/%2d\t\t         %2d Up(Degraded)"
-				%(active_self_heal,cluster.numSelfHeal(),
+				%(cluster.sh_active,cluster.sh_enabled,
 				cluster.volume_summary['degraded']))
 
 		print ("   Bricks   : %2d/%2d\t\t         %2d Up(Partial)"
-				%(active_bricks,cluster.numBricks(),
+				%(cluster.bricks_active,cluster.brick_count,
 				cluster.volume_summary['partial']))
 
 		print (" "*41 + "%2d Down"
@@ -117,19 +107,49 @@ def main():
 			print "  - Cluster is HEALTHY, all checks successful"
 
 	print
+	
+def logMode():
+	""" produce the output suitable for later processing by logstash, 
+		or splunk et al """
+		
+	now = datetime.now()
+	print "%s %s"%(now, str(cluster))
 
+def main():
+	
+	if cluster.output_mode == 'console':
+		# add some spacing to make the output stand out more
+		print " "			
+
+	
+	cluster.initialise()
+	cluster.updateState()
+	cluster.calcCapacity()
+
+	#active_nodes = cluster.activeNodes()
+	#active_bricks = cluster.activeBricks()
+	#active_self_heal = cluster.checkSelfHeal()
+	
+	cluster.healthChecks()
+	
+	if cluster.output_mode == 'console':
+		consoleMode()
+	
+	elif cluster.output_mode in ['json','keyvalue']:
+		logMode()
+	
 
 if __name__ == '__main__':
 	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.46")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.5")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
-	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information")
+	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information (-s with -v)")
 	parser.add_option("-u","--units",dest="units",choices=['bin','dec'],help="display capacity units in DECimal or BINary format (GB vs GiB)")
 	parser.add_option("-l","--layout",dest="layout",action="store_true",default=False,help="show brick layout when used with -v, or -a")
-	#parser.add_option("--xml",dest="xml",action="store_true",default=False,help="produce output in XML format (NOT IMPLEMENTED YET!)")
+	parser.add_option("-o","--output-mode",dest="output_mode",default='console',choices=['console','json','keyvalue'],help="produce output in different formats - json, keyvalue or console(default)")
 	(options, args) = parser.parse_args()
 
 	state_request = options.state
@@ -152,6 +172,8 @@ if __name__ == '__main__':
 	# Create a cluster object. This simply creates the structure of 
 	# the object and populates the glusterfs version 
 	cluster = Cluster()
+	
+	cluster.output_mode = options.output_mode
 	
 	if cluster.glfsVersionOK(MIN_VERSION):
 		

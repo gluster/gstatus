@@ -22,6 +22,7 @@ import 	sys
 import 	re
 import 	glob
 import 	xml.etree.ElementTree 	as 	ETree
+import 	json
 from 	decimal import *
 
 
@@ -60,10 +61,29 @@ from 	gstatus.functions.utils		import 	displayBytes
 class Cluster:
 	""" The cluster object is the parent of nodes, bricks and volumes """
 
+	# definition of the cluster attributes that should be used when 
+	# displaying the cluster in json/keyvalue format
+	attr_list = [	'status','glfs_version','node_count','nodes_active',
+					'volume_count','brick_count','bricks_active','volume_summary',
+					'sh_enabled','sh_active','raw_capacity','usable_capacity',
+					]
+
+
 	def __init__(self):
-		self.glfs_version = ''	# version, or mixed
-		self.msgs=[]
-		self.node={}
+
+		
+		# counters
+		self.node_count = 0
+		self.volume_count = 0
+		self.brick_count = 0 
+		self.sh_enabled = 0		# sh = self heal
+		
+		self.nodes_active = 0
+		self.bricks_active = 0
+		self.sh_active = 0
+				
+		self.node={}			# dict of node objects indexed by node name
+		
 		self.node_names = []	# list of node names populated from the 
 								# queryVolFiles method
 		self.nodes_down = 0
@@ -71,18 +91,23 @@ class Cluster:
 								# tool from gluster's perspective
 		self.volume={}
 		self.brick={}
+		
 		self.glfs_version = self.getVersion()
+		
 		self.raw_capacity = 0
 		self.usable_capacity = 0
-		self.messages = []
-									# flag showing whether the cluster
-		self.name_based = True	
-		self.has_volumes = False	
-									# was formed based on name or IP
 		
+		self.messages = []			# cluster error messages
+		
+									# flag showing whether the cluster
+		self.name_based = True		# was formed based on name or IP
+		
+		self.has_volumes = False		
 		self.status = "healthy"				# be optimistic at first :)	
 		
 		self.volume_summary = {'up':0, 'degraded':0,'partial':0,'down':0}
+
+		self.output_mode = ''		# console, json, keyvalue based output
 		
 		# cluster status is either healthy/unhealthy or potentially down
 		# (although a down cluster means all nodes are non-responsive)
@@ -110,6 +135,8 @@ class Cluster:
 		if self.has_volumes:
 			
 			self.defineNodes()
+			
+			#self.numNodes()
 
 			self.defineVolumes()
 			
@@ -129,7 +156,9 @@ class Cluster:
 	def defineNodes(self):
 		""" Define the nodes, by looking at 'gluster peer status' output """
 		
-		sys.stdout.write("Processing nodes"+" "*20+"\n\r\x1b[A")
+		if self.output_mode == 'console':
+			# display a progress message
+			sys.stdout.write("Processing nodes"+" "*20+"\n\r\x1b[A")
 		
 		(rc, peer_list) = issueCMD('gluster peer status --xml')
 		
@@ -209,13 +238,15 @@ class Cluster:
 			exit(12)
 			
 
-		
+		self.node_count = len(self.node)
 		
 
 	def defineVolumes(self):
 		""" Create the volume + brick objects """
 		
-		sys.stdout.write("Building volume objects"+" "*20+"\n\r\x1b[A")
+		if self.output_mode == 'console':
+			# print a progress message
+			sys.stdout.write("Building volume objects"+" "*20+"\n\r\x1b[A")
 		
 		(rc, vol_info) = issueCMD("gluster vol info --xml")
 		
@@ -321,8 +352,10 @@ class Cluster:
 						
 						(hostname,brick_fsname) = brick_path.split(':')
 						self.node[hostname].self_heal_enabled = True
+						self.sh_enabled += 1
 						
-
+			self.volume_count = len(self.volume)
+			self.brick_count  = len(self.brick)
 
 	def getVersion(self):
 		""" return the version of gluster """
@@ -370,32 +403,38 @@ class Cluster:
 		else:
 			return False
 
-	def numVolumes(self):
-			return len(self.volume)
+#	def numVolumes(self):
+		## DELETE ME
+		#self.volume_count = len(self.volume)
+		#return self.volume_count
 
-	def numNodes(self):
-		return len(self.node)
+	#def numNodes(self):
+		## DELETE ME
+		#self.node_count = len(self.node)
+		#return self.node_count
 
-	def numBricks(self):
-		return len(self.brick)
+	#def numBricks(self):
+		## DELETE ME
+		#self.brick_count = len(self.brick)
+		#return self.brick_count
 
 	def activeNodes(self):
 		""" Count no. of nodes in an up state """
-		ctr = 0
+		
 		for hostname in self.node:
 			if self.node[hostname].state == '1':
-				ctr += 1
+				self.nodes_active += 1
 		
-		return ctr
+		return self.nodes_active
 
 	def activeBricks(self):
 		""" return the number of bricks in an up state """
-		ctr = 0
+		
 		for brick_name in self.brick:
 			if self.brick[brick_name].up:
-				ctr +=1
-
-		return ctr
+				self.bricks_active +=1
+		
+		return self.bricks_active
 
 	def healthChecks(self):
 		""" perform checks on elements that affect the reported state of the cluster """
@@ -443,21 +482,21 @@ class Cluster:
 		
 	def checkSelfHeal(self):
 		""" return the number of nodes that have self-heal active """
-		ctr = 0
+
 		for node_name in self.node:
 			if self.node[node_name].self_heal_active:
-				ctr += 1
+				self.sh_active += 1
 				
-		return ctr
+		return self.sh_active
 
 	def numSelfHeal(self):
 		""" return the number of nodes with self heal enabled """
-		ctr = 0
+		
 		for node_name in self.node:
 			if self.node[node_name].self_heal_enabled:
-				ctr += 1
+				self.sh_enabled += 1
 				
-		return ctr
+		return self.sh_enabled
 
 	def updateState(self):
 		""" update the state of the cluster by processing the output of 'vol status' commands
@@ -466,8 +505,9 @@ class Cluster:
 			- vol status all --> self heal states 
 		
 		"""
-		
-		sys.stdout.write("Updating volume information"+" "*20+"\n\r\x1b[A")
+		if self.output_mode == 'console':
+			# print a progress message
+			sys.stdout.write("Updating volume information"+" "*20+"\n\r\x1b[A")
 		
 		# WORKAROUND
 		# The code issues n vol status requests because issueing a vol status
@@ -512,7 +552,9 @@ class Cluster:
 				# ---------------------------------------------------------------------			
 				if self.volume[volume_name].self_heal_enabled:
 					
-					sys.stdout.write("Analysing Self Heal daemons"+" "*20+"\n\r\x1b[A")
+					if self.output_mode == 'console':
+						sys.stdout.write("Analysing Self Heal daemons"+" "*20+"\n\r\x1b[A")
+						
 					(rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
 					gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
 								for line in vol_status if 'opRet' in line][0])
@@ -573,7 +615,7 @@ class Cluster:
 									self.node[node_name].self_heal_active = False
 
 					# update the self heal flags, based on the vol status
-					self.volume[volume_name].updateSelfHeal()
+					self.volume[volume_name].updateSelfHeal(self.output_mode)
 					
 					
 		
@@ -588,6 +630,12 @@ class Cluster:
 			else:
 				self.volume_summary['down'] += 1
 		
+		
+		self.activeNodes()		# update active node couter
+		self.activeBricks()		# update active brick counter
+		self.checkSelfHeal()
+		
+		
 	def calcCapacity(self):
 		""" update the cluster's overall capacity stats based on the
 			volume information """
@@ -598,7 +646,38 @@ class Cluster:
 			self.raw_capacity += this_vol.raw_capacity
 			self.usable_capacity += this_vol.usable_capacity
 		
+	def __str__(self):
+		""" return a human readable form of the cluster object for processing 
+			by logstash, splunk etc """
+
+		data = {}
+		data_string = ''
 		
+		for key,value in sorted(vars(self).iteritems()):
+			
+			if key in Cluster.attr_list:
+				
+				if self.output_mode == 'json':
+					data[key] = value
+					
+				elif self.output_mode == 'keyvalue':
+					if isinstance(value,dict):
+						for dict_key in value:
+							item_value = value[dict_key] if isinstance(value[dict_key],int) else "'%s'"%(value[dict_key])
+							data_string += "%s_%s=%s,"%(key,dict_key,item_value)
+							
+					else:
+						item_value = value if isinstance(value,int) else "'%s'"%(value)
+						data_string += "%s=%s,"%(key,item_value)
+						
+		if self.output_mode == 'json':
+			data_string = json.dumps(data,sort_keys=True)
+			
+		elif self.output_mode == 'keyvalue':
+			data_string = data_string[:-1]
+		
+			
+		return data_string
 		
 
 class Node:
@@ -812,7 +891,7 @@ class Volume:
 				online_bricks += 1
 		return (online_bricks, all_bricks)
 
-	def updateSelfHeal(self):
+	def updateSelfHeal(self,output_mode):
 		""" Updates the state of self heal for this volume """
 		
 		# first check if this volume is a replicated volume, if not
@@ -829,7 +908,8 @@ class Volume:
 				
 		self.self_heal_string = self.getSelfHealStats()
 		
-		sys.stdout.write("Analysing Self Heal backlog"+" "*20+"\n\r\x1b[A")
+		if output_mode == 'console':
+			sys.stdout.write("Analysing Self Heal backlog"+" "*20+"\n\r\x1b[A")
 		
 		# On gluster 3.4 & 3.5 vol heal with --xml is not supported so parsing
 		# has to be done the old fashioned way :)
