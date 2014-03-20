@@ -1,12 +1,15 @@
 Name:		gstatus
-Version:	0.3
-Release:	0.2%{?dist}
+Version:	0.45
+Release:	0.1%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
 License:	GPLv3
 URL:		https://forge.gluster.org/gstatus
-Source0:	https://forge.gluster.org/gstatus/gstatus/archive-tarball/v%{version}#/%{name}-%{version}.tar.gz
+
+# download from https://forge.gluster.org/gstatus/gstatus/archive-tarball/v%{version}
+# rename to gstatus-%{version}.tar.gz
+Source0:	%{name}-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires:	python2-devel
@@ -30,7 +33,7 @@ to write the output in xml form for integration with automated checks.
 
 
 %prep
-%setup -q
+%setup -q -n %{name}-%{name}
 
 
 %build
@@ -55,6 +58,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu Mar 20 2014 Niels de Vos <ndevos@redhat.com> 0.45-0.1
+- Update to version 0.45
+
 * Mon Mar 3 2014 Niels de Vos <ndevos@redhat.com> - 0.3-0.2
 - Fix building in mock, add BuildRequires python-setuptools
 
