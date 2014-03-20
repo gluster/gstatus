@@ -39,16 +39,20 @@ To Do List / Change Log
     - added a message count against the cluster state, to immediately show how
       many errors a cluster may have i.e. UNHEALTHY(5) --> 5 errors found
 
-0.5 planned
+0.5 Pending
+  - add output options for json, keyvalue and console mode (console is default ie. stdout)
+  - add client connection counts (glusterfs connections)
+  
+0.6 planned
   - add config file support
     - space usage triggers on volumes 
     - space usage trigger on bricks
 
-0.6 planned
+0.7 planned
   - address the blocking problem when a node goes down (commands to a separate thread with a 
     timeout?) 
 
-0.7 planned
+0.8 planned
   - add brick check to make recommendations on mount point definitions/filesystem, and an option to suppress recommendations
 
 Items being considered
