@@ -39,7 +39,7 @@ To Do List / Change Log
     - added a message count against the cluster state, to immediately show how
       many errors a cluster may have i.e. UNHEALTHY(5) --> 5 errors found
 
-0.5 Pending
+0.5 Complete 2014/03/21
   - add output options for json, keyvalue and console mode (console is default ie. stdout)
   - add client connection counts (glusterfs connections)
   
