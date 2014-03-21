@@ -111,6 +111,7 @@ class Cluster:
 		self.output_mode = ''		# console, json, keyvalue based output
 		
 		self.client_count = 0
+		self.client_set = set()
 		
 		# cluster status is either healthy/unhealthy or potentially down
 		# (although a down cluster means all nodes are non-responsive)
@@ -715,8 +716,10 @@ class Cluster:
 			# process the volume xml
 			self.volume[vol_name].clientCount(volume_xml)
 
-			# update the clusters view of client connections
-			self.client_count += self.volume[vol_name].client_count
+			# add the volumes unique set of clients to the clusters set
+			self.client_set.update(self.volume[vol_name].client_set)
+			
+		self.client_count = len(self.client_set)
 			
 			
 
@@ -791,6 +794,7 @@ class Volume:
 		self.protocol = {'SMB':'on', 'NFS':'on','NATIVE':'on'}
 		
 		self.client_count = 0
+		self.client_set = set()
 
 	def brickUpdate(self,brick_xml):
 		""" method to update a volume's brick"""
@@ -1071,15 +1075,14 @@ class Volume:
 
 		# Since sets only store unique values, we'll use that to track
 		# unique clients
-		unique_clients = set()
 		
 		for brick in brick_clients_list:
 			clients = brick.findall('.//hostname')
 			for client in clients:
 				client_name = client.text.split(':')[0]
-				unique_clients.add(client_name)
+				self.client_set.add(client_name)
 		
-		self.client_count = len(unique_clients)
+		self.client_count = len(self.client_set)
 			
 
 class Brick:
