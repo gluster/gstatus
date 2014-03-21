@@ -63,8 +63,10 @@ def consoleMode():
 				%(cluster.bricks_active,cluster.brick_count,
 				cluster.volume_summary['partial']))
 
-		print (" "*41 + "%2d Down"
-				%(cluster.volume_summary['down']))
+		print ("   Clients  :  %4d%s%2d Down\n"%
+				(cluster.client_count,
+				" "*22,
+				cluster.volume_summary['down']))
 
 	if volume_request:
 		print "Volume Information"
@@ -86,6 +88,7 @@ def consoleMode():
 				print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string))
 				print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
 					%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
+				print ("\t" + " "*17 + "Gluster Clients : %d"%(vol.client_count))
 					
 				if volume_layout:
 					print

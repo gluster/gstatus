@@ -66,6 +66,7 @@ class Cluster:
 	attr_list = [	'status','glfs_version','node_count','nodes_active',
 					'volume_count','brick_count','bricks_active','volume_summary',
 					'sh_enabled','sh_active','raw_capacity','usable_capacity',
+					'client_count',
 					]
 
 
@@ -108,6 +109,8 @@ class Cluster:
 		self.volume_summary = {'up':0, 'degraded':0,'partial':0,'down':0}
 
 		self.output_mode = ''		# console, json, keyvalue based output
+		
+		self.client_count = 0
 		
 		# cluster status is either healthy/unhealthy or potentially down
 		# (although a down cluster means all nodes are non-responsive)
@@ -634,7 +637,8 @@ class Cluster:
 		self.activeNodes()		# update active node couter
 		self.activeBricks()		# update active brick counter
 		self.checkSelfHeal()
-		
+
+		self.calcConnections()
 		
 	def calcCapacity(self):
 		""" update the cluster's overall capacity stats based on the
@@ -679,6 +683,42 @@ class Cluster:
 			
 		return data_string
 		
+	def calcConnections(self):
+		""" Issue a vol status all clients --xml and invoke the volume's
+			clientCount method to determine unique clients connected to 
+			the clusters volume(s) """
+			
+		if self.output_mode == 'console':
+			# print a progress message
+			sys.stdout.write("Processing gluster client connections"+" "*20+"\n\r\x1b[A")
+		
+		(rc, vol_clients) = issueCMD("gluster vol status all clients --xml")
+		gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
+						for line in vol_clients if 'opRet' in line][0])
+		
+		if gluster_rc > 0:
+			# unable to get the client connectivity information
+			print "\ngstatus has been unable to get the output of a 'vol status all clients --xml' command"
+			print "and can not continue.\n"
+			exit(16)
+		
+		# At this point the command worked, so we can process the results
+		xml_string = ''.join(vol_clients)
+		xml_root = ETree.fromstring(xml_string)
+		
+		volumes = xml_root.findall('.//volume')
+		
+		for volume_xml in volumes:
+			# Find the volume name
+			vol_name = volume_xml.find('./volName').text
+			
+			# process the volume xml
+			self.volume[vol_name].clientCount(volume_xml)
+
+			# update the clusters view of client connections
+			self.client_count += self.volume[vol_name].client_count
+			
+			
 
 class Node:
 	""" Node object, just used as a container as a parent for bricks """
@@ -749,6 +789,8 @@ class Volume:
 		
 		# By default all these protocols are enabled by gluster
 		self.protocol = {'SMB':'on', 'NFS':'on','NATIVE':'on'}
+		
+		self.client_count = 0
 
 	def brickUpdate(self,brick_xml):
 		""" method to update a volume's brick"""
@@ -1014,11 +1056,31 @@ class Volume:
 				repl_set += 1
 		print
 
-
-			
-
+	def clientCount(self,vol_stat_clients_xml):
+		""" receive volume xml, and parse to determine the total # of
+			unique clients connected to the volume """
 		
+		# By default the xml provides a 'clientCount' child element for 
+		# the volume, but this number does not account for duplicate clients
+		# connected e.g. One client can connect to a volume multiple times
+		# getting counted 'n' times. This code determines unique clients
+		# connected to the volume - since that would be more useful to 
+		# sysadmins/Operations
+		
+		brick_clients_list = vol_stat_clients_xml.findall('.//clientsStatus')
 
+		# Since sets only store unique values, we'll use that to track
+		# unique clients
+		unique_clients = set()
+		
+		for brick in brick_clients_list:
+			clients = brick.findall('.//hostname')
+			for client in clients:
+				client_name = client.text.split(':')[0]
+				unique_clients.add(client_name)
+		
+		self.client_count = len(unique_clients)
+			
 
 class Brick:
 	""" Brick object populated initially through vol info, and then updated
