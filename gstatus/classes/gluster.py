@@ -66,7 +66,7 @@ class Cluster:
 	attr_list = [	'status','glfs_version','node_count','nodes_active',
 					'volume_count','brick_count','bricks_active','volume_summary',
 					'sh_enabled','sh_active','raw_capacity','usable_capacity',
-					'client_count',
+					'client_count','used_capacity',
 					]
 
 
@@ -97,6 +97,7 @@ class Cluster:
 		
 		self.raw_capacity = 0
 		self.usable_capacity = 0
+		self.used_capacity = 0
 		
 		self.messages = []			# cluster error messages
 		
@@ -407,20 +408,6 @@ class Cluster:
 		else:
 			return False
 
-#	def numVolumes(self):
-		## DELETE ME
-		#self.volume_count = len(self.volume)
-		#return self.volume_count
-
-	#def numNodes(self):
-		## DELETE ME
-		#self.node_count = len(self.node)
-		#return self.node_count
-
-	#def numBricks(self):
-		## DELETE ME
-		#self.brick_count = len(self.brick)
-		#return self.brick_count
 
 	def activeNodes(self):
 		""" Count no. of nodes in an up state """
@@ -650,6 +637,7 @@ class Cluster:
 		
 			self.raw_capacity += this_vol.raw_capacity
 			self.usable_capacity += this_vol.usable_capacity
+			self.used_capacity += this_vol.used_capacity
 		
 	def __str__(self):
 		""" return a human readable form of the cluster object for processing 
