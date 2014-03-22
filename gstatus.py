@@ -46,8 +46,10 @@ def consoleMode():
 	print ("      Status: %s Capacity: %s(raw bricks)"%(status_msg.ljust(17),
 			displayBytes(cluster.raw_capacity,display_units)))
 		
-	print ("   Glusterfs: %s           %s(usable)\n"%(cluster.glfs_version.ljust(17),
+	print ("   Glusterfs: %s           %s(usable)"%(cluster.glfs_version.ljust(17),
 			displayBytes(cluster.usable_capacity,display_units)))	
+	
+	print ("%s%s(used)\n"%(" "*42,displayBytes(cluster.used_capacity,display_units)))
 	
 	if state_request:
 		
