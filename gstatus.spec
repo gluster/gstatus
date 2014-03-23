@@ -58,6 +58,9 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Mar 24 2014 Paul Cuzner  <ndevos@redhat.com> 0.5-0.1
+- Update to version 0.5
+
 * Thu Mar 20 2014 Niels de Vos <ndevos@redhat.com> 0.45-0.1
 - Update to version 0.45
 
