@@ -579,7 +579,12 @@ class Cluster:
 								if node_name == 'localhost':
 									node_name = self.localhost
 								
-								# check for a node name that is fqdn	
+								# for dns defined environments
+								elif node_name in self.node_names:
+									pass
+								
+								# path name provided is fqdn, but nodes were
+								# defined with shortnames	
 								elif '.' in node_name:
 									node_name = node_name.split('.')[0]
 									
@@ -606,7 +611,7 @@ class Cluster:
 									self.node[node_name].self_heal_active = False
 
 					# update the self heal flags, based on the vol status
-					self.volume[volume_name].updateSelfHeal(self.output_mode)
+					self.volume[volume_name].updateSelfHeal(self.output_mode,self.node_names)
 					
 					
 		
@@ -925,7 +930,7 @@ class Volume:
 				online_bricks += 1
 		return (online_bricks, all_bricks)
 
-	def updateSelfHeal(self,output_mode):
+	def updateSelfHeal(self,output_mode,node_names):
 		""" Updates the state of self heal for this volume """
 		
 		# first check if this volume is a replicated volume, if not
@@ -959,11 +964,20 @@ class Volume:
 				if line.startswith('brick'):
 					(node,path_name) = line.replace(':',' ').split()[1:]
 					
+					# check of the node is in the node_names list passed by caller
+					if node in node_names:
+						pass
+						
 					# 3.4.0.59 in RHS returning fqdn node names
-					if '.' in node:
+					elif '.' in node:
 						node = node.split('.')[0]
+						if node not in node_names:
+							# self heal returned a node name that isn't resolvable
+							print "gstatus unable to resolve node name %s from vol heal <vol> info"%(node)
+							print "and can not continue"
+							exit(16)
 
-					# 3.4.0.59 adding trailing '/' to brick path
+					# 3.4.0.59 added trailing '/' to brick path,so remove it!
 					brick_path = node + ":" + path_name.rstrip('/')
 
 				if  line.startswith('number'):
