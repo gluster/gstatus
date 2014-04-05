@@ -1,5 +1,5 @@
 Name:		gstatus
-Version:	0.45
+Version:	0.5
 Release:	0.1%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
@@ -58,7 +58,10 @@ rm -rf %{buildroot}
 
 
 %changelog
-* Mon Mar 24 2014 Paul Cuzner  <ndevos@redhat.com> 0.5-0.1
+* Wed Apr 2 2014 Paul Cuzner  <pcuzner@redhat.com> 0.5-0.1
+- updated to account for fqdn cluster definitions 
+
+* Mon Mar 24 2014 Paul Cuzner  <pcuzner@redhat.com> 0.5-0.1
 - Update to version 0.5
 
 * Thu Mar 20 2014 Niels de Vos <ndevos@redhat.com> 0.45-0.1
