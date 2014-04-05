@@ -44,6 +44,7 @@ To Do List / Change Log
   - add client connection counts (glusterfs connections)
   
 0.6 planned
+  - add task info to the volume state to show when rebalance is active
   - add config file support
     - space usage triggers on volumes 
     - space usage trigger on bricks
