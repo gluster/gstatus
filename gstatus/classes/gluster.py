@@ -687,14 +687,17 @@ class Cluster:
 			sys.stdout.write("Processing gluster client connections"+" "*20+"\n\r\x1b[A")
 		
 		(rc, vol_clients) = issueCMD("gluster vol status all clients --xml")
+
 		gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
-						for line in vol_clients if 'opRet' in line][0])
+						for line in vol_clients if 'opRet' in line][0]) if rc == 0 else rc
 		
-		if gluster_rc > 0:
+		if gluster_rc > 0 :
 			# unable to get the client connectivity information
-			print "\ngstatus has been unable to get the output of a 'vol status all clients --xml' command"
-			print "and can not continue.\n"
-			exit(16)
+			if self.output_mode == 'console':
+				print "\ngstatus has been unable to get the output of a 'vol status all clients --xml' command"
+				print "and can not continue.\n"
+			return
+			
 		
 		# At this point the command worked, so we can process the results
 		xml_string = ''.join(vol_clients)
