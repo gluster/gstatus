@@ -66,7 +66,7 @@ class Cluster:
 	attr_list = [	'status','glfs_version','node_count','nodes_active',
 					'volume_count','brick_count','bricks_active','volume_summary',
 					'sh_enabled','sh_active','raw_capacity','usable_capacity',
-					'client_count','used_capacity',
+					'client_count','used_capacity','product_name'
 					]
 
 
@@ -93,7 +93,7 @@ class Cluster:
 		self.volume={}
 		self.brick={}
 		
-		self.glfs_version = self.getVersion()
+		self.glfs_version = ''
 		
 		self.raw_capacity = 0
 		self.usable_capacity = 0
@@ -113,6 +113,12 @@ class Cluster:
 		
 		self.client_count = 0
 		self.client_set = set()
+		
+		self.product_name = ''		# Product identifier, RHS release info or
+									# Community
+		
+		self.setVersion()
+		
 		
 		# cluster status is either healthy/unhealthy or potentially down
 		# (although a down cluster means all nodes are non-responsive)
@@ -362,10 +368,18 @@ class Cluster:
 			self.volume_count = len(self.volume)
 			self.brick_count  = len(self.brick)
 
-	def getVersion(self):
-		""" return the version of gluster """
+	def setVersion(self):
+		""" Sets the current version and product identifier for this cluster """
 		(rc, versInfo) = issueCMD("gluster --version")
-		return versInfo[0].split()[1]
+		
+		self.glfs_version = versInfo[0].split()[1]
+
+		if os.path.exists('/etc/redhat-storage-release'):
+			with open('/etc/redhat-storage-release','r') as RHS_version:
+				self.product_name = RHS_version.readline().rstrip()
+		else:
+			self.product_name = "Community"
+
 		
 	def queryVolFiles(self):
 		""" Look at the vol files and determine whether they are name
