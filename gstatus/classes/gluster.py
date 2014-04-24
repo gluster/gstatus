@@ -382,21 +382,25 @@ class Cluster:
 
 		
 	def queryVolFiles(self):
-		""" Look at the vol files and determine whether they are name
-			based, returning a boolean to the caller """
+		""" Look at vol file and peer info to determine the complete 
+			list of nodes in the cluster - capacity nodes + arbitration nodes """
 		
 		ip_ctr, named_ctr = 0, 0
+		
+		self.name_based = False
 		
 		# use glob to find the vol files
 		vol_files = glob.glob('/var/lib/glusterd/vols/*/trusted-*-fuse.vol')
 		
+		peer_files = glob.glob('/var/lib/glusterd/peers/*')
+		
 		if vol_files:
 			self.has_volumes = True
 		
-			# get a list of unique remote host names used in the vol files
+			# get a list of unique host names used in the vol files
 			hosts = set([l.strip().split()[2] for f in vol_files 
 						for l in open(f).readlines() if 'remote-host' in l])
-			
+
 			# Hopefully all the hosts will be either named or IP's not a mix
 			# but if not, we'll side with the majority!			
 			for hostname in hosts:
@@ -404,11 +408,58 @@ class Cluster:
 					ip_ctr += 1
 				else:
 					named_ctr += 1
-		
+					
+			self.name_based = True if named_ctr >= ip_ctr else False
+			
+			# Some clusters may have arbitration nodes which would not 
+			# appear in the vol file(s), so supplement the host set with those
+			
+			peer_selected = False
+			# first find a peer this host is connected to that is online
+			for peer in peer_files:
+
+				# read each peer file, creating a dict from its values
+				peer_data=dict((parm.split('=')[0],parm.split('=')[1].strip()) 
+						for parm in open(peer).readlines() )
+				
+				if peer_data['state'] == '3':
+					peer_selected = True
+					break
+			
+			# now ask that peer for it's view of the peers in the cluster
+			if peer_selected:
+				(rc, pool_xml) = issueCMD("gluster --remote-host=%s pool list --xml"%(peer_data['hostname1']))
+
+				# check the rc .. TODO!
+				
+				xml_string = ''.join(pool_xml)
+				xml_root = ETree.fromstring(xml_string)
+				host_names = xml_root.findall('.//hostname')
+
+				# Now look at the hosts and add what's missing to the node_names set
+				for host_xml in host_names:
+					host_name = host_xml.text
+					
+					if host_name == 'localhost':
+						continue
+						
+					if isIP(host_name) and self.name_based:
+						new_name = IPtoHost(host_name)
+						if new_name != host_name:
+							host_name = new_name
+							
+					if host_name not in hosts:
+						hosts.add(host_name)
+					
+			else:
+				
+				print "\nUnable to find a peer in an online state. gstatus aborting in"
+				print "queryVolFiles function."
+				exit(12)
+				
+
 			self.node_names = list(hosts)
 		
-		self.name_based = True if named_ctr >= ip_ctr else False
-
 		
 
 	def glfsVersionOK(self, min_version):
@@ -596,11 +647,6 @@ class Cluster:
 								# for dns defined environments
 								elif node_name in self.node_names:
 									pass
-								
-								# path name provided is fqdn, but nodes were
-								# defined with shortnames	
-								elif '.' in node_name:
-									node_name = node_name.split('.')[0]
 									
 								elif isIP(node_name) and self.name_based:
 									
@@ -618,6 +664,10 @@ class Cluster:
 										print "does not correspond to a cluster node name, and can not continue\n"
 										exit(16)
 										
+								# path name provided is fqdn, but nodes were
+								# defined with shortnames	
+								elif '.' in node_name:
+									node_name = node_name.split('.')[0]										
 			
 								if node_state == '1':
 									self.node[node_name].self_heal_active = True
