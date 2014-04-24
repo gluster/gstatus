@@ -422,7 +422,7 @@ class Cluster:
 				peer_data=dict((parm.split('=')[0],parm.split('=')[1].strip()) 
 						for parm in open(peer).readlines() )
 				
-				if peer_data['state'] == '3':
+				if portOpen(peer_data['hostname1'],24007):
 					peer_selected = True
 					break
 			
