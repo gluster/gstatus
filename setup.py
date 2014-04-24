@@ -19,7 +19,7 @@ class strip_py_ext(distutils.command.install_scripts.install_scripts):
 
 setup(
     name = "gstatus",
-    version= "0.52",
+    version= "0.53",
     description= "Show the current health of the elements in a Gluster Trusted Pool",
     long_description = long_description,
     author = "Paul Cuzner",
