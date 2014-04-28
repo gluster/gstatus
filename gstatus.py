@@ -148,7 +148,7 @@ if __name__ == '__main__':
 	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.53")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.54")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information (-s with -v)")
