@@ -425,6 +425,10 @@ class Cluster:
 				
 				
 				if portOpen(peer_data['hostname1'],24007):
+					# check if name is IP, but its a name based cluster so convert it
+					if self.name_based and isIP(peer_data['hostname1']):
+						peer_data['hostname1'] = IPtoHost(peer_data['hostname1'])
+							
 					if peer_data['hostname1'] not in hosts:
 						hosts.add(peer_data['hostname1'])
 					peer_selected = True
