@@ -422,7 +422,11 @@ class Cluster:
 				peer_data=dict((parm.split('=')[0],parm.split('=')[1].strip()) 
 						for parm in open(peer).readlines() )
 				
+				
+				
 				if portOpen(peer_data['hostname1'],24007):
+					if peer_data['hostname1'] not in hosts:
+						hosts.add(peer_data['hostname1'])
 					peer_selected = True
 					break
 			
@@ -1026,12 +1030,13 @@ class Volume:
 			total_heal_count = 0
 			
 			for line in vol_heal_output:
-				line = line.lower()			# drop to lower case for consistency
+				#line = line.lower()			# drop to lower case for consistency
 
-				if line.startswith('brick'):
+				if line.lower().startswith('brick'):
 					(node,path_name) = line.replace(':',' ').split()[1:]
 					
 					# check of the node is in the node_names list passed by caller
+					# this could be IP addresses or names
 					if node in node_names:
 						pass
 						
