@@ -436,7 +436,7 @@ class Cluster:
 			
 			# now ask that peer for it's view of the peers in the cluster
 			if peer_selected:
-				(rc, pool_xml) = issueCMD("gluster --remote-host=%s pool list --xml"%(peer_data['hostname1']))
+				(rc, pool_xml) = issueCMD("gluster --remote-host=%s peer status --xml"%(peer_data['hostname1']))
 
 				# check the rc .. TODO!
 				
