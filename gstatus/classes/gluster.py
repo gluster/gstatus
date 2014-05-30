@@ -27,8 +27,10 @@ from 	decimal import *
 
 
 from 	gstatus.functions.syscalls	import 	issueCMD
-from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost
+from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost, hostToIP
 from 	gstatus.functions.utils		import 	displayBytes
+
+import 	gstatus.functions.config 	as cfg
 
 #
 #
@@ -103,6 +105,7 @@ class Cluster:
 		
 									# flag showing whether the cluster
 		self.name_based = True		# was formed based on name or IP
+		self.fqdn_based = True
 		
 		self.has_volumes = False		
 		self.status = "healthy"				# be optimistic at first :)	
@@ -138,7 +141,11 @@ class Cluster:
 			(bricks are created within the volume logic) """
 		
 		self.queryVolFiles()			# populate node names and type
-										# by looking at the vol files
+										# by looking at the vol files. This
+										# just 'registers' the nodes as being
+										# members of the cluster. defineNodes 
+										# then uses this list to assign state
+										# to each of the nodes (up,down)
 	
 		# has_volumes is defined in the queryVolFiles call, so the logic 
 		# here is that if we have seen vol files, then it's ok to
@@ -147,8 +154,6 @@ class Cluster:
 			
 			self.defineNodes()
 			
-			#self.numNodes()
-
 			self.defineVolumes()
 			
 		else:
@@ -191,6 +196,13 @@ class Cluster:
 		# create a copy of the nodes as discovered from the volfile(s)
 		valid_nodes = list(self.node_names)
 		
+		# DEBUG --------------------------------------------------------------
+		if cfg.debug:
+			print "defineNodes. Starting to apply state information for the following nodes;"
+			for n in valid_nodes:
+				print "- %s"%(n) 
+		# --------------------------------------------------------------------
+		
 		xml_string = ''.join(peer_list)
 		xml_root = ETree.fromstring(xml_string)
 
@@ -210,13 +222,31 @@ class Cluster:
 				add_node = True
 				#
 			elif not isIP(this_hostname) and self.name_based:
+				
+				# DEBUG ------------------------------------------------
+				if cfg.debug:
+					print "defineNodes. %s host NAME returned from peer status, not in valid_nodes"%(this_hostname)
+				#-------------------------------------------------------
+				
 				add_node = True
+				
 			elif isIP(this_hostname) and self.name_based:
+				
+				
+				# DEBUG -----------------------------------------------------------
+				if cfg.debug:
+					print "defineNodes. %s IP missing from qyrVolfile list, but in peer status. Cluster is name based"%(this_hostname)
+				#------------------------------------------------------------------
+				
 				# try to change the IPaddr to a hostname
-				replacement_name = IPtoHost(this_hostname)
-				if replacement_name in valid_nodes:
-					this_hostname = replacement_name
+				(shortName, fqdn) = IPtoHost(this_hostname)
+				if shortName in valid_nodes:
+					this_hostname = shortName
 					add_node = True
+				elif fqdn in valid_nodes:
+					this_hostname = fqdn
+					add_node = True
+					
 				else:
 					print "gstatus is unable to resolve peer name of %s"%(this_hostname)
 					print "and can not continue.\n"
@@ -224,7 +254,12 @@ class Cluster:
 				
 				
 			if add_node:
-				# 
+				#
+				# DEBUG ----------------------------------------------------------
+				if cfg.debug:
+					print "defineNodes. Creating a node object for %s"%(this_hostname)
+				#-----------------------------------------------------------------
+				 
 				new_node = Node(this_hostname,
 								node_info['uuid'],
 								node_info['connected'])
@@ -235,20 +270,20 @@ class Cluster:
 		# that's the remote nodes created, now for the localhost
 		local_uuid = open('/var/lib/glusterd/glusterd.info').readlines()[0].strip()
 		local_connected = '1' if portOpen('localhost',24007) else '0'
-		if len(valid_nodes) == 1:
-			local_hostname = valid_nodes[0]			# take what's left
-			self.localhost = local_hostname
-			new_node = Node(local_hostname,
-							local_uuid,
-							local_connected)
-			self.node[local_hostname] = new_node
-			
-		else:
-			print "Too many peers were not resolved when creating node"
-			print "objects. gstatus can not continue.\n"
-			exit(12)
-			
 
+		local_hostname = valid_nodes[0]			# take what's left
+		self.localhost = local_hostname
+			
+		# DEBUG ------------------------------------------------------------
+		if cfg.debug:
+			print "defineNodes. Creating a node object for %s"%(local_hostname)
+		# ------------------------------------------------------------------
+			
+		new_node = Node(local_hostname,
+						local_uuid,
+						local_connected)
+		self.node[local_hostname] = new_node
+			
 		self.node_count = len(self.node)
 		
 
@@ -279,7 +314,8 @@ class Cluster:
 			new_volume = Volume(vol_dict)
 			self.volume[new_volume.name] = new_volume
 			
-			#print "DEBUG - adding volume " + new_volume.name
+			if cfg.debug:
+				print "DEBUG - adding volume " + new_volume.name
 			
 			# add information about any volume options
 			opt_nodes = vol_object.findall('.//option')
@@ -385,7 +421,7 @@ class Cluster:
 		""" Look at vol file and peer info to determine the complete 
 			list of nodes in the cluster - capacity nodes + arbitration nodes """
 		
-		ip_ctr, named_ctr = 0, 0
+		ip_ctr, named_ctr, fqdn_names = 0, 0, 0
 		
 		self.name_based = False
 		
@@ -408,56 +444,92 @@ class Cluster:
 					ip_ctr += 1
 				else:
 					named_ctr += 1
+					if '.' in hostname:
+						fqdn_names +=1
 					
 			self.name_based = True if named_ctr >= ip_ctr else False
+			
+			self.fqdn_based = True if self.name_based and (named_ctr == fqdn_names) else False
 			
 			# Some clusters may have arbitration nodes which would not 
 			# appear in the vol file(s), so supplement the host set with those
 			
 			peer_selected = False
 			# first find a peer this host is connected to that is online
+						
 			for peer in peer_files:
 
 				# read each peer file, creating a dict from its values
 				peer_data=dict((parm.split('=')[0],parm.split('=')[1].strip()) 
 						for parm in open(peer).readlines() )
 				
-				
-				
 				if portOpen(peer_data['hostname1'],24007):
-					# check if name is IP, but its a name based cluster so convert it
+
+					# if name is IP, but its a name based cluster convert it
 					if self.name_based and isIP(peer_data['hostname1']):
-						peer_data['hostname1'] = IPtoHost(peer_data['hostname1'])
+						
+						if cfg.debug:
+							print "Processing local peer file that as defines an IP not a name"
+							
+						(shortName, fqdn) = IPtoHost(peer_data['hostname1'])
+						
+						if shortName in hosts:
+							peer_data['hostname1'] = shortName
+						elif fqdn in hosts:
+							peer_data['hostname1'] = fqdn
+				
+						
 							
 					if peer_data['hostname1'] not in hosts:
+						print "adding %s to the list of hosts"%(peer_data['hostname1'])
 						hosts.add(peer_data['hostname1'])
 					peer_selected = True
 					break
 			
-			# now ask that peer for it's view of the peers in the cluster
+			## now ask that peer for it's view of the peers in the cluster
 			if peer_selected:
-				(rc, pool_xml) = issueCMD("gluster --remote-host=%s peer status --xml"%(peer_data['hostname1']))
+				(rc, peer_xml) = issueCMD("gluster --remote-host=%s peer status --xml"%(peer_data['hostname1']))
 
-				# check the rc .. TODO!
-				
-				xml_string = ''.join(pool_xml)
+			# check the rc .. TODO!
+			
+				xml_string = ''.join(peer_xml)
 				xml_root = ETree.fromstring(xml_string)
 				host_names = xml_root.findall('.//hostname')
 
-				# Now look at the hosts and add what's missing to the node_names set
+			# Now look at the hosts and add what's missing to the node_names set
 				for host_xml in host_names:
 					host_name = host_xml.text
+			
+
 					
-					if host_name == 'localhost':
-						continue
-						
 					if isIP(host_name) and self.name_based:
-						new_name = IPtoHost(host_name)
-						if new_name != host_name:
-							host_name = new_name
-							
-					if host_name not in hosts:
-						hosts.add(host_name)
+					
+						(shortName, fqdn) = IPtoHost(host_name)
+					
+						if shortName in hosts:
+							continue
+						elif fqdn in hosts:
+							continue
+					
+						old_name = host_name
+						host_name = fqdn if self.fqdn_based else shortName
+						
+					
+						# DEBUG -------------------------------------------------
+						if cfg.debug:
+							print "qryvolfile. IP node from 2ndary system found"
+							print "qryvolfile. converted %s to %s"%(old_name,host_name)
+					# -------------------------------------------------------
+					
+						
+				if host_name not in hosts:
+					
+					# DEBUG -------------------------------------------------
+					if cfg.debug:
+						print "qryvolfile. Additonal node added from peer status output - %s (arbitration node?)"%(host_name)
+					# -------------------------------------------------------
+					
+					hosts.add(host_name)
 					
 			else:
 				
@@ -662,9 +734,11 @@ class Cluster:
 									# gluster's self info sometimes puts an IP not
 									# name as the hostname, so we need to catch that 
 									# and correct it if possible
-									resolved_name = IPtoHost(node_name)	
-									if resolved_name in self.node_names:
-										node_name = resolved_name
+									(shortName, fqdn) = IPtoHost(node_name)	
+									if shortName in self.node_names:
+										node_name = shortName 
+									elif fqdn in self.node_names:
+										node_name = fqdn
 									else:
 										# tried to resolve the IP, but the name
 										# doesn't tally with our cluster nodes
@@ -1034,17 +1108,31 @@ class Volume:
 			total_heal_count = 0
 			
 			for line in vol_heal_output:
-				#line = line.lower()			# drop to lower case for consistency
 
 				if line.lower().startswith('brick'):
 					(node,path_name) = line.replace(':',' ').split()[1:]
+
+					if cfg.debug:
+						print "updateSelfHeal. self heal cmd gave a node name of %s"%(node)
+
+					# Catch the situation where the vol heal provides fqdn
+					# but the cluster is defined with IP addresses
+
+					if node not in node_names and not isIP(node):
+						IPaddr = hostToIP(node)
+						if IPaddr in node_names:
+							if cfg.debug:
+								print "updateSelfHeal. Switched fqdn to IP addresss %s"%(IPaddr)
+							node = IPaddr
 					
-					# check of the node is in the node_names list passed by caller
+					# check if the node is in the node_names list passed by caller
 					# this could be IP addresses or names
 					if node in node_names:
 						pass
 						
-					# 3.4.0.59 in RHS returning fqdn node names
+					# 3.4.0.59 / 3.6 in RHS returning fqdn node names
+					# regardless of the brick definition and names used by peer probe!
+						
 					elif '.' in node:
 						node = node.split('.')[0]
 						if node not in node_names:
