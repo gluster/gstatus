@@ -22,6 +22,8 @@
 #  
 #  
 
+import 	gstatus.functions.config as cfg
+
 import 	socket
 
 
@@ -36,16 +38,33 @@ def portOpen(hostname, port, scan_timeout=0.05):
 	return state
 	
 def IPtoHost(addr):
-	""" convert an IP address to a host name """
+	""" convert an IP address to a host name, returning shortname and fqdn to the 
+		caller
+	"""
+	
 	
 	try:
-		host_name = socket.gethostbyaddr(addr)[0].split('.')[0]
+		fqdn = socket.gethostbyaddr(addr)[0]
+		shortName = fqdn.split('.')[0]
+		if fqdn == shortName:
+			fqdn = ""
+		
 	except:
 		# can't resolve it, so default to the address given
-		host_name = addr
+		shortName = addr
+		fqdn = ""
 	
-	return host_name	
+	return (shortName, fqdn)
 	
+
+def hostToIP(hostname):
+	""" provide a IP address for a given fqdn """
+	
+	try:
+		return socket.gethostbyname(hostname)
+	except:
+		return hostname
+
 	
 def isIP(host_string):
 	""" Quick method to determine whether a string is an IP address or not """
