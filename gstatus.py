@@ -25,15 +25,11 @@ from 	optparse 	import OptionParser			# command line option parsing
 from 	datetime	import datetime
 import 	os
 
-from gstatus.functions.syscalls	import issueCMD
-from gstatus.functions.utils	import displayBytes
-from gstatus.classes.gluster	import Cluster, Volume, Brick
+#from 	gstatus.functions.syscalls	import issueCMD
+import 	gstatus.functions.config 	as cfg
+from 	gstatus.functions.utils		import displayBytes
+from 	gstatus.classes.gluster		import Cluster, Volume, Brick
 
-MIN_VERSION = 3.4
-
-# Known issues;
-# if the checks are done right after a node down event, the vol status query does not
-# complete and ends up blocking on the originating node until the node timeout occurs.
 
 def consoleMode():
 	""" Produce the output to the users console - stdout """
@@ -148,15 +144,20 @@ if __name__ == '__main__':
 	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.55")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.57")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information (-s with -v)")
 	parser.add_option("-u","--units",dest="units",choices=['bin','dec'],help="display capacity units in DECimal or BINary format (GB vs GiB)")
 	parser.add_option("-l","--layout",dest="layout",action="store_true",default=False,help="show brick layout when used with -v, or -a")
 	parser.add_option("-o","--output-mode",dest="output_mode",default='console',choices=['console','json','keyvalue'],help="produce output in different formats - json, keyvalue or console(default)")
+	parser.add_option("-D","--debug",dest="debug_on",action="store_true",help="turn on debug mode")
 	(options, args) = parser.parse_args()
 
+	# initialise any global variables
+	cfg.init()
+	cfg.debug = True if options.debug_on else False
+	
 	state_request = options.state
 	volume_request = options.volumes
 	
@@ -180,7 +181,7 @@ if __name__ == '__main__':
 	
 	cluster.output_mode = options.output_mode
 	
-	if cluster.glfsVersionOK(MIN_VERSION):
+	if cluster.glfsVersionOK(cfg.min_version):
 		
 		main()
 		
