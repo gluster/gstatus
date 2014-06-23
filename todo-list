@@ -43,6 +43,12 @@ To Do List / Change Log
   - add output options for json, keyvalue and console mode (console is default ie. stdout)
   - add client connection counts (glusterfs connections)
   
+0.56
+  - added debug mode (-D) 
+  - added a config module for global vars across the modules
+  - updated hostname resolution to use shortname and FQDN
+  - add code in main gluster module  for debug.  
+  
 0.6 planned
   - add task info to the volume state to show when rebalance is active
   - add config file support
@@ -57,6 +63,8 @@ To Do List / Change Log
   - add brick check to make recommendations on mount point definitions/filesystem, and an option to suppress recommendations
 
 Items being considered
+- RFE - Peter AuYeung - for volume capacity, include quota information if enabled
+- RFE - Peter AuYeung - for the xml output provide a volume option
 
 
 Known BUGS
