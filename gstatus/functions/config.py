@@ -27,8 +27,10 @@
 def init():
 	
 	global debug 
+	global min_version
 	
 	debug = False
+	min_version = 3.4
 	
 
 
