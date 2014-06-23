@@ -315,7 +315,7 @@ class Cluster:
 			self.volume[new_volume.name] = new_volume
 			
 			if cfg.debug:
-				print "DEBUG - adding volume " + new_volume.name
+				print "defineVolumes. Adding volume %s"%(new_volume.name)
 			
 			# add information about any volume options
 			opt_nodes = vol_object.findall('.//option')
@@ -353,7 +353,8 @@ class Cluster:
 				new_volume.brick_order.append(brick_path)
 				(hostname,pathname) = brick_path.split(':')
 				
-				# print "DEBUG - adding brick " + brick_path
+				if cfg.debug:
+					print "defineVolumes. Adding brick %s"%(brick_path)
 				
 				new_brick = Brick(brick_path, self.node[hostname], new_volume.name)
 
@@ -437,6 +438,9 @@ class Cluster:
 			hosts = set([l.strip().split()[2] for f in vol_files 
 						for l in open(f).readlines() if 'remote-host' in l])
 
+			if cfg.debug:
+				print "queryVolFiles found these hosts in the vol file(s) - %s"%(str(hosts))
+
 			# Hopefully all the hosts will be either named or IP's not a mix
 			# but if not, we'll side with the majority!			
 			for hostname in hosts:
@@ -468,8 +472,10 @@ class Cluster:
 					# if name is IP, but its a name based cluster convert it
 					if self.name_based and isIP(peer_data['hostname1']):
 						
+						# -----------------------------------------------------------------------------------
 						if cfg.debug:
-							print "Processing local peer file that as defines an IP not a name"
+							print "qryvolfiles. Processing local peer file that has IP not a name"
+						# -----------------------------------------------------------------------------------
 							
 						(shortName, fqdn) = IPtoHost(peer_data['hostname1'])
 						
@@ -970,7 +976,8 @@ class Volume:
 			brick information/state
 		"""
 		
-		# print "DEBUG --> Attempting to update volume " + self.name
+		if cfg.debug:
+			print "update. Attempting to update volume %s"%(self.name)
 
 		node_elements = volume_xml.findall('.//node')
 		# print "DEBUG --> this volume xml has %d node elements"%(len(node_elements))
@@ -989,7 +996,6 @@ class Volume:
 				# Skipping this node element since it doesn't have child elements
 				# and is therefore malformed xml
 				pass
-				# print "DEBUG --> skipping a node element"
 		
 		# ----------------------------------------------------------------
 		# Brick info has been updated, we can calculate the volume capacity
