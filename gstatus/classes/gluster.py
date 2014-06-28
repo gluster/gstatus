@@ -695,7 +695,7 @@ class Cluster:
 				if self.volume[volume_name].self_heal_enabled:
 					
 					if self.output_mode == 'console':
-						sys.stdout.write("Analysing Self Heal daemons"+" "*20+"\n\r\x1b[A")
+						sys.stdout.write("Analysing Self Heal daemons on %s %s\n\r\x1b[A"%(volume_name, " "*20))
 						
 					(rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
 					gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
@@ -1103,7 +1103,7 @@ class Volume:
 		self.self_heal_string = self.getSelfHealStats()
 		
 		if output_mode == 'console':
-			sys.stdout.write("Analysing Self Heal backlog"+" "*20+"\n\r\x1b[A")
+			sys.stdout.write("Analysing Self Heal backlog for %s %s \n\r\x1b[A"%(self.name," "*20))
 		
 		# On gluster 3.4 & 3.5 vol heal with --xml is not supported so parsing
 		# has to be done the old fashioned way :)
