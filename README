@@ -173,6 +173,48 @@ Known Issues
    node has actually gone. This causes the tool to appear to hang as this 
    timeout is honoured in gluster, when the tool is invoked within 30secs of a
    node shutdown.
-
-
+   
+2) For some reason(?), some gluster peer definitions end up as IP not name based
+   when the actual probe was done using the name. This causes a problem to gstatus
+   since it has a volume definition refering to a name, but a peer status result
+   that refers to an IP. This results in a 'keyerror'. To fix, you just need to 
+   correct the peer definition, by using peer probe again on the IP based node to 
+   ensure a name is used. 
+   
+   eg.
+   
+   4 node cluster, node ".11" has all the nodes defined correctly, but looking at 
+   peer status on the other nodes (.12,.13,.14) they all point to the .11 node by IP 
+   not name.
+   To remedy, login to each of the nodes (.12,.13,.14), and peer probe the .11 node
+   again by it's correct name (i.e. the name used for this node in the volume definitions)
+   
+   This is a good response - notice each hostname is a name not IP
+   [root@ip-10-100-1-11 ~]# gluster peer status 
+   Number of Peers: 3
+   Hostname: ip-10-100-2-12
+   Uuid: 4e8680e0-7b2d-481a-a3f6-6df09915cfcf
+   State: Peer in Cluster (Connected)
+   Hostname: ip-10-100-1-13
+   Uuid: 0f492e87-7fd2-4c9e-956c-8a1de2d19760
+   State: Peer in Cluster (Connected)
+   Hostname: ip-10-100-2-14
+   Uuid: f62aca71-4d9b-4d30-b40c-aa02bce08a82
+   State: Peer in Cluster (Connected)
+   
+   now looking at one of the other nodes, to illustrate the 'bad' response
+   [root@ip-10-100-2-14 gstatus]# gluster peer status 
+   Number of Peers: 3
+   Hostname: ip-10-100-2-12
+   Uuid: 4e8680e0-7b2d-481a-a3f6-6df09915cfcf
+   State: Peer in Cluster (Connected)
+   Hostname: ip-10-100-1-13
+   Uuid: 0f492e87-7fd2-4c9e-956c-8a1de2d19760
+   State: Peer in Cluster (Connected)
+   Hostname: 10.100.1.11       <-- notice this is IP not name based for some reason?
+   Uuid: ba991d97-7bae-4ecc-9758-2715c7df8de3
+   State: Peer in Cluster (Connected)	
+   
+   to fix
+   peer probe <name>
  
