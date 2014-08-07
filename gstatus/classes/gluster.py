@@ -27,7 +27,7 @@ from 	decimal import *
 
 
 from 	gstatus.functions.syscalls	import 	issueCMD
-from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost, hostToIP
+from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost, hostToIP,hostAliasList
 from 	gstatus.functions.utils		import 	displayBytes
 
 import 	gstatus.functions.config 	as cfg
@@ -85,13 +85,15 @@ class Cluster:
 		self.bricks_active = 0
 		self.sh_active = 0
 				
-		self.node={}			# dict of node objects indexed by node name
+		self.node={}			# dict of node objects indexed uuid
 		
-		self.node_names = []	# list of node names populated from the 
-								# queryVolFiles method
+		self.node_names = []	
 		self.nodes_down = 0
 		self.localhost = ''		# name of the current host running the 
 								# tool from gluster's perspective
+								
+		self.localUUID = ''
+		
 		self.volume={}
 		self.brick={}
 		
@@ -140,12 +142,16 @@ class Cluster:
 		""" call the node, volume 'generator' to create the child objects 
 			(bricks are created within the volume logic) """
 		
-		self.queryVolFiles()			# populate node names and type
+		#self.queryVolFiles()			# populate node names and type
 										# by looking at the vol files. This
 										# just 'registers' the nodes as being
 										# members of the cluster. defineNodes 
 										# then uses this list to assign state
 										# to each of the nodes (up,down)
+	
+		self.has_volumes = True if glob.glob('/var/lib/glusterd/vols/*/trusted-*-fuse.vol') else False
+		
+		
 	
 		# has_volumes is defined in the queryVolFiles call, so the logic 
 		# here is that if we have seen vol files, then it's ok to
@@ -155,7 +161,7 @@ class Cluster:
 			self.defineNodes()
 			
 			self.defineVolumes()
-			
+
 		else:
 			# no volumes in this cluster, print a message and abort
 			print "This cluster doesn't have any volumes/daemons running."
@@ -166,126 +172,103 @@ class Cluster:
 			print
 			exit(12)
 
-
+	def getNode(self,node_string):
+		""" 
+		receive an IP or name of a node and return the corresponding uuid
+		"""
+		node_uuid = ''
+		
+		for uuid in self.node:
+			node = self.node[uuid]
+			if node_string in node.alias_list:
+				node_uuid =uuid
+				break
+				
+		return node_uuid
 
 
 	def defineNodes(self):
-		""" Define the nodes, by looking at 'gluster peer status' output """
+		""" 
+		define the nodes present in the trusted pool by using peer status
+		against this host and a remote host in the pool
+		"""
 		
 		if self.output_mode == 'console':
 			# display a progress message
 			sys.stdout.write("Processing nodes"+" "*20+"\n\r\x1b[A")
-		
+
 		(rc, peer_list) = issueCMD('gluster peer status --xml')
-		
+
 		if rc > 0:
 			print "gluster did not respond to a peer status request, gstatus"
 			print "can not continue.\n"
 			exit(12)
-
-		# at this point the peer status worked, so lets process the list 
-		# of nodes, comparing them against the source of truth aka the 
-		# volfile :) This is necessary, since a peer status and pool list
-		# doesn't return the same output on every node, IP addresses can 
-		# appear in the output even though the peer probes were all done
-		# by name!.
 		
-		#define the fields that we're interested in 
+		# define a list of elements in the xml that we're interested in 
 		field_list = ['hostname','uuid','connected']
-		
-		# create a copy of the nodes as discovered from the volfile(s)
-		valid_nodes = list(self.node_names)
-		
-		# DEBUG --------------------------------------------------------------
-		if cfg.debug:
-			print "defineNodes. Starting to apply state information for the following nodes;"
-			for n in valid_nodes:
-				print "- %s"%(n) 
-		# --------------------------------------------------------------------
-		
+			
 		xml_string = ''.join(peer_list)
 		xml_root = ETree.fromstring(xml_string)
 
 		peer_list = xml_root.findall('.//peer')
+		online_peer = ''
 		
-		# peer list will be cluster_size - 1 elements, since localhost is not used
-		# by matching on these peers, and removing matched names from a 
-		# a list, the remaining name from the reference list - derived from
-		# the volfile(s) - has got to be the localhost ip
-		
+		# len(peer_list) + 1 = size of trusted pool (cluster)		
 		for peer in peer_list:
-			
 			node_info = getAttr(peer,field_list)
 			this_hostname = node_info['hostname']
-			add_node = False
-			if this_hostname in valid_nodes:
-				add_node = True
-				#
-			elif not isIP(this_hostname) and self.name_based:
+			
+			alias_list = hostAliasList(this_hostname)
+			
+			new_node = Node(node_info['uuid'], node_info['connected'],
+							alias_list)	
+			
+			# Pick a peer that's online to ask about this hosts details
+			if node_info['connected'] and online_peer == '':
+				online_peer = this_hostname
 				
-				# DEBUG ------------------------------------------------
-				if cfg.debug:
-					print "defineNodes. %s host NAME returned from peer status, not in valid_nodes"%(this_hostname)
-				#-------------------------------------------------------
-				
-				add_node = True
-				
-			elif isIP(this_hostname) and self.name_based:
-				
-				
-				# DEBUG -----------------------------------------------------------
-				if cfg.debug:
-					print "defineNodes. %s IP missing from qyrVolfile list, but in peer status. Cluster is name based"%(this_hostname)
-				#------------------------------------------------------------------
-				
-				# try to change the IPaddr to a hostname
-				(shortName, fqdn) = IPtoHost(this_hostname)
-				if shortName in valid_nodes:
-					this_hostname = shortName
-					add_node = True
-				elif fqdn in valid_nodes:
-					this_hostname = fqdn
-					add_node = True
-					
-				else:
-					print "gstatus is unable to resolve peer name of %s"%(this_hostname)
-					print "and can not continue.\n"
-					exit(12)
-				
-				
-			if add_node:
-				#
-				# DEBUG ----------------------------------------------------------
-				if cfg.debug:
-					print "defineNodes. Creating a node object for %s"%(this_hostname)
-				#-----------------------------------------------------------------
-				 
-				new_node = Node(this_hostname,
-								node_info['uuid'],
-								node_info['connected'])
-				self.node[this_hostname] = new_node
-				if this_hostname in valid_nodes:
-					valid_nodes.remove(this_hostname)				
-		
-		# that's the remote nodes created, now for the localhost
-		local_uuid = open('/var/lib/glusterd/glusterd.info').readlines()[0].strip()
+							
+			# add this node object to the cluster objects 'dict'
+			self.node[node_info['uuid']] = new_node
+			
+		# now we take care of the running host
+		with open('/var/lib/glusterd/glusterd.info') as glusterd:
+			for opt in glusterd:
+				if opt.startswith('UUID'):
+					local_uuid = opt.strip().split('=')[1]
+					break
+					 
 		local_connected = '1' if portOpen('localhost',24007) else '0'
-
-		local_hostname = valid_nodes[0]			# take what's left
-		self.localhost = local_hostname
-			
-		# DEBUG ------------------------------------------------------------
-		if cfg.debug:
-			print "defineNodes. Creating a node object for %s"%(local_hostname)
-		# ------------------------------------------------------------------
-			
-		new_node = Node(local_hostname,
-						local_uuid,
-						local_connected)
-		self.node[local_hostname] = new_node
-			
-		self.node_count = len(self.node)
+		local_hostname = ''
 		
+		(rc, peer_xml) = issueCMD("gluster --remote-host=%s peer status --xml"%(online_peer))
+		xml_string = ''.join(peer_xml)
+		xml_root = ETree.fromstring(xml_string)
+		peer_list = xml_root.findall('.//peer')
+		
+		alias_list = []
+		for peer in peer_list:
+			peer_info = getAttr(peer,field_list)
+			if peer_info['uuid'] == local_uuid:
+				local_hostname = peer_info['hostname']
+				alias_list = hostAliasList(peer_info['hostname'])
+				break
+				
+		
+		if alias_list:
+			new_node = Node(local_uuid, local_connected,
+							alias_list)
+							
+			self.node[local_uuid] = new_node
+			self.localUUID = local_uuid	
+			self.node_count = len(self.node)			
+			
+		else:
+			# can't get a local hostname? twilight zone moment
+			print "unable to identify the local node. gstatus aborting"
+			pass	
+			exit(12)
+
 
 	def defineVolumes(self):
 		""" Create the volume + brick objects """
@@ -299,9 +282,9 @@ class Cluster:
 		xml_string = ''.join(vol_info)
 		xml_root = ETree.fromstring(xml_string)
 		
-		vol_nodes = xml_root.findall('.//volume')
+		vol_elements= xml_root.findall('.//volume')
 		
-		for vol_object in vol_nodes:
+		for vol_object in vol_elements:
 			
 			# set up a dict for the initial definition of the volume 
 			vol_dict = {}
@@ -356,14 +339,16 @@ class Cluster:
 				if cfg.debug:
 					print "defineVolumes. Adding brick %s"%(brick_path)
 				
-				new_brick = Brick(brick_path, self.node[hostname], new_volume.name)
+				node_uuid = self.getNode(hostname)
+				
+				new_brick = Brick(brick_path, self.node[node_uuid], new_volume.name)
 
 				# Add the brick to the cluster and volume
 				self.brick[brick_path] = new_brick
 				new_volume.brick[brick_path] = new_brick
 
 				# add this brick to the owning node
-				brick_owner = self.node[hostname]
+				brick_owner = self.node[node_uuid]
 				brick_owner.brick[brick_path] = new_brick
 
 				if new_volume.replicaCount > 1:
@@ -397,13 +382,14 @@ class Cluster:
 				if heal_enabled:
 					
 					for brick_path in new_volume.brick:
-						
-						(hostname,brick_fsname) = brick_path.split(':')
-						self.node[hostname].self_heal_enabled = True
+						this_brick = self.brick[brick_path]
+						this_brick.node.self_heal_enabled = True
+						#(hostname,brick_fsname) = brick_path.split(':')
+						#self.node[hostname].self_heal_enabled = True
 						self.sh_enabled += 1
 						
-			self.volume_count = len(self.volume)
-			self.brick_count  = len(self.brick)
+		self.volume_count = len(self.volume)
+		self.brick_count  = len(self.brick)
 
 	def setVersion(self):
 		""" Sets the current version and product identifier for this cluster """
@@ -417,136 +403,6 @@ class Cluster:
 		else:
 			self.product_name = "Community"
 
-		
-	def queryVolFiles(self):
-		""" Look at vol file and peer info to determine the complete 
-			list of nodes in the cluster - capacity nodes + arbitration nodes """
-		
-		ip_ctr, named_ctr, fqdn_names = 0, 0, 0
-		
-		self.name_based = False
-		
-		# use glob to find the vol files
-		vol_files = glob.glob('/var/lib/glusterd/vols/*/trusted-*-fuse.vol')
-		
-		peer_files = glob.glob('/var/lib/glusterd/peers/*')
-		
-		if vol_files:
-			self.has_volumes = True
-		
-			# get a list of unique host names used in the vol files
-			hosts = set([l.strip().split()[2] for f in vol_files 
-						for l in open(f).readlines() if 'remote-host' in l])
-
-			if cfg.debug:
-				print "queryVolFiles found these hosts in the vol file(s) - %s"%(str(hosts))
-
-			# Hopefully all the hosts will be either named or IP's not a mix
-			# but if not, we'll side with the majority!			
-			for hostname in hosts:
-				if isIP(hostname):
-					ip_ctr += 1
-				else:
-					named_ctr += 1
-					if '.' in hostname:
-						fqdn_names +=1
-					
-			self.name_based = True if named_ctr >= ip_ctr else False
-			
-			self.fqdn_based = True if self.name_based and (named_ctr == fqdn_names) else False
-			
-			# Some clusters may have arbitration nodes which would not 
-			# appear in the vol file(s), so supplement the host set with those
-			
-			peer_selected = False
-			# first find a peer this host is connected to that is online
-						
-			for peer in peer_files:
-
-				# read each peer file, creating a dict from its values
-				peer_data=dict((parm.split('=')[0],parm.split('=')[1].strip()) 
-						for parm in open(peer).readlines() )
-				
-				if portOpen(peer_data['hostname1'],24007):
-
-					# if name is IP, but its a name based cluster convert it
-					if self.name_based and isIP(peer_data['hostname1']):
-						
-						# -----------------------------------------------------------------------------------
-						if cfg.debug:
-							print "qryvolfiles. Processing local peer file that has IP not a name"
-						# -----------------------------------------------------------------------------------
-							
-						(shortName, fqdn) = IPtoHost(peer_data['hostname1'])
-						
-						if shortName in hosts:
-							peer_data['hostname1'] = shortName
-						elif fqdn in hosts:
-							peer_data['hostname1'] = fqdn
-				
-						
-							
-					if peer_data['hostname1'] not in hosts:
-						print "adding %s to the list of hosts"%(peer_data['hostname1'])
-						hosts.add(peer_data['hostname1'])
-					peer_selected = True
-					break
-			
-			## now ask that peer for it's view of the peers in the cluster
-			if peer_selected:
-				(rc, peer_xml) = issueCMD("gluster --remote-host=%s peer status --xml"%(peer_data['hostname1']))
-
-			# check the rc .. TODO!
-			
-				xml_string = ''.join(peer_xml)
-				xml_root = ETree.fromstring(xml_string)
-				host_names = xml_root.findall('.//hostname')
-
-			# Now look at the hosts and add what's missing to the node_names set
-				for host_xml in host_names:
-					host_name = host_xml.text
-			
-
-					
-					if isIP(host_name) and self.name_based:
-					
-						(shortName, fqdn) = IPtoHost(host_name)
-					
-						if shortName in hosts:
-							continue
-						elif fqdn in hosts:
-							continue
-					
-						old_name = host_name
-						host_name = fqdn if self.fqdn_based else shortName
-						
-					
-						# DEBUG -------------------------------------------------
-						if cfg.debug:
-							print "qryvolfile. IP node from 2ndary system found"
-							print "qryvolfile. converted %s to %s"%(old_name,host_name)
-					# -------------------------------------------------------
-					
-						
-				if host_name not in hosts:
-					
-					# DEBUG -------------------------------------------------
-					if cfg.debug:
-						print "qryvolfile. Additonal node added from peer status output - %s (arbitration node?)"%(host_name)
-					# -------------------------------------------------------
-					
-					hosts.add(host_name)
-					
-			else:
-				
-				print "\nUnable to find a peer in an online state. gstatus aborting in"
-				print "queryVolFiles function."
-				exit(12)
-				
-
-			self.node_names = list(hosts)
-		
-		
 
 	def glfsVersionOK(self, min_version):
 		
@@ -563,8 +419,8 @@ class Cluster:
 	def activeNodes(self):
 		""" Count no. of nodes in an up state """
 		
-		for hostname in self.node:
-			if self.node[hostname].state == '1':
+		for uuid in self.node:
+			if self.node[uuid].state == '1':
 				self.nodes_active += 1
 		
 		return self.nodes_active
@@ -625,8 +481,8 @@ class Cluster:
 	def checkSelfHeal(self):
 		""" return the number of nodes that have self-heal active """
 
-		for node_name in self.node:
-			if self.node[node_name].self_heal_active:
+		for uuid in self.node:
+			if self.node[uuid].self_heal_active:
 				self.sh_active += 1
 				
 		return self.sh_active
@@ -634,8 +490,8 @@ class Cluster:
 	def numSelfHeal(self):
 		""" return the number of nodes with self heal enabled """
 		
-		for node_name in self.node:
-			if self.node[node_name].self_heal_enabled:
+		for uuid in self.node:
+			if self.node[uuid].self_heal_enabled:
 				self.sh_enabled += 1
 				
 		return self.sh_enabled
@@ -726,44 +582,27 @@ class Cluster:
 							if node.find('./hostname').text == 'Self-heal Daemon':
 								node_name = node.find('./path').text
 								node_state = node.find('./status').text
+								uuid = ''
 								
+								# convert the name to a usable uuid
 								if node_name == 'localhost':
-									node_name = self.localhost
-								
-								# for dns defined environments
-								elif node_name in self.node_names:
-									pass
-									
-								elif isIP(node_name) and self.name_based:
-									
-									# WORKAROUND
-									# gluster's self info sometimes puts an IP not
-									# name as the hostname, so we need to catch that 
-									# and correct it if possible
-									(shortName, fqdn) = IPtoHost(node_name)	
-									if shortName in self.node_names:
-										node_name = shortName 
-									elif fqdn in self.node_names:
-										node_name = fqdn
-									else:
-										# tried to resolve the IP, but the name
-										# doesn't tally with our cluster nodes
-										print "gstatus has been given an IP address for a self-heal daemon that"
-										print "does not correspond to a cluster node name, and can not continue\n"
-										exit(16)
-										
-								# path name provided is fqdn, but nodes were
-								# defined with shortnames	
-								elif '.' in node_name:
-									node_name = node_name.split('.')[0]										
-			
-								if node_state == '1':
-									self.node[node_name].self_heal_active = True
+									uuid = self.localUUID
 								else:
-									self.node[node_name].self_heal_active = False
+									uuid = self.getNode(node_name)
+								
+								if not uuid:
+									# tried to resolve the name but couldn't
+									print "gstatus has been given an 'path' for a self heal daemon that"
+									print "does not correspond to a peer node, and can not continue\n"
+									exit(16)
+										
+								if node_state == '1':
+									self.node[uuid].self_heal_active = True
+								else:
+									self.node[uuid].self_heal_active = False
 
 					# update the self heal flags, based on the vol status
-					self.volume[volume_name].updateSelfHeal(self.output_mode,self.node_names)
+					self.volume[volume_name].updateSelfHeal(self.output_mode)
 					
 					
 		
@@ -876,8 +715,8 @@ class Node:
 	
 	node_state = { '0':'down', '1':'up'}
 
-	def __init__(self,node,uuid,state):
-		self.node_name = node
+	def __init__(self,uuid,state,aliases):
+		#self.node_name = node
 		self.uuid=uuid
 		self.state=state		# index for node_state dict
 		# self.state_text = Node.node_state[state]
@@ -886,6 +725,14 @@ class Node:
 		self.local=False		# is this the localhost?
 		self.self_heal_enabled = False
 		self.self_heal_active = False
+		self.alias_list = aliases		# list of names this node is known by
+		
+		
+		# DEBUG ------------------------------------------------------------
+		if cfg.debug:
+			print "Creating a node object with uuid %s, with names of %s"%(self.uuid, str(self.alias_list))
+		# ------------------------------------------------------------------
+			
 
 	
 
@@ -1085,7 +932,7 @@ class Volume:
 				online_bricks += 1
 		return (online_bricks, all_bricks)
 
-	def updateSelfHeal(self,output_mode,node_names):
+	def updateSelfHeal(self,output_mode):
 		""" Updates the state of self heal for this volume """
 		
 		# first check if this volume is a replicated volume, if not
@@ -1094,7 +941,7 @@ class Volume:
 			self.self_heal_string = 'N/A'
 			return
 			
-		# is self-heal is disabled by option
+		# if self-heal is disabled by option...
 		if 'cluster.self-heal-daemon' in self.options:
 			if self.options['cluster.self-heal-daemon'].lower() in ['off','false']:
 				self.self_heal_string = 'DISABLED'
@@ -1106,7 +953,7 @@ class Volume:
 			sys.stdout.write("Analysing Self Heal backlog for %s %s \n\r\x1b[A"%(self.name," "*20))
 		
 		# On gluster 3.4 & 3.5 vol heal with --xml is not supported so parsing
-		# has to be done the old fashioned way :)
+		# has to be done the old fashioned way :(
 		(rc, vol_heal_output) = issueCMD("gluster vol heal %s info"%(self.name))
 
 		if rc == 0:
@@ -1121,38 +968,34 @@ class Volume:
 					if cfg.debug:
 						print "updateSelfHeal. self heal cmd gave a node name of %s"%(node)
 
-					# Catch the situation where the vol heal provides fqdn
-					# but the cluster is defined with IP addresses
-
-					if node not in node_names and not isIP(node):
-						IPaddr = hostToIP(node)
-						if IPaddr in node_names:
-							if cfg.debug:
-								print "updateSelfHeal. Switched fqdn to IP addresss %s"%(IPaddr)
-							node = IPaddr
-					
-					# check if the node is in the node_names list passed by caller
-					# this could be IP addresses or names
-					if node in node_names:
-						pass
-						
-					# 3.4.0.59 / 3.6 in RHS returning fqdn node names
-					# regardless of the brick definition and names used by peer probe!
-						
-					elif '.' in node:
-						node = node.split('.')[0]
-						if node not in node_names:
-							# self heal returned a node name that isn't resolvable
-							print "gstatus unable to resolve node name %s from vol heal <vol> info"%(node)
-							print "and can not continue"
-							exit(16)
-
 					# 3.4.0.59 added trailing '/' to brick path,so remove it!
 					brick_path = node + ":" + path_name.rstrip('/')
+					
 
 				if  line.lower().startswith('number'):
 					heal_count = int(line.split(':')[1])
-					self.brick[brick_path].heal_count = heal_count
+					
+					try:
+						self.brick[brick_path].heal_count = heal_count
+						if cfg.debug:
+							print "updateSelfHeal. brick path from self heal matched brick object successfully"
+							
+					except KeyError:
+						if cfg.debug:
+							print "updateSelfHeal. brick path from self heal mismatch, attempting shortname matching"
+							
+						brick_path = node.split('.')[0] + ":" + path_name.rstrip('/')
+						
+						if cfg.debug:
+							print "updateSelfHeal. brick path match successful using shortname"
+							
+						try:
+							self.brick[brick_path].heal_count = heal_count
+						except:
+							print "updateSelfHeal.Unable to apply self heal stats due to %s not matching existing"%(brick_path)
+							print "brick objects, and can not continue."						
+							exit(16)
+								
 					total_heal_count += heal_count
 						
 			self.self_heal_count = total_heal_count
@@ -1187,7 +1030,7 @@ class Volume:
 		""" print function used to show the relationships of the bricks in
 			a volume """
 
-		supported_volume_types = ['Replicated', 'Distribute', 'Distributed-Replicate']
+		supported_volume_types = ['Replicate', 'Distribute', 'Distributed-Replicate']
 
 		if self.typeStr not in supported_volume_types:
 			print "\tDisplay of this volume type has yet to be implemented"
