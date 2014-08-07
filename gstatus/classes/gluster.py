@@ -87,9 +87,9 @@ class Cluster:
 				
 		self.node={}			# dict of node objects indexed uuid
 		
-		self.node_names = []	
+		#self.node_names = []	
 		self.nodes_down = 0
-		self.localhost = ''		# name of the current host running the 
+		#self.localhost = ''		# name of the current host running the 
 								# tool from gluster's perspective
 								
 		self.localUUID = ''
@@ -105,9 +105,9 @@ class Cluster:
 		
 		self.messages = []			# cluster error messages
 		
-									# flag showing whether the cluster
-		self.name_based = True		# was formed based on name or IP
-		self.fqdn_based = True
+									## flag showing whether the cluster
+		#self.name_based = True		# was formed based on name or IP
+		#self.fqdn_based = True
 		
 		self.has_volumes = False		
 		self.status = "healthy"				# be optimistic at first :)	
@@ -261,7 +261,8 @@ class Cluster:
 							
 			self.node[local_uuid] = new_node
 			self.localUUID = local_uuid	
-			self.node_count = len(self.node)			
+			#self.node_count = len(self.node)			
+			self.node_count = Node.nodeCount()
 			
 		else:
 			# can't get a local hostname? twilight zone moment
@@ -388,8 +389,11 @@ class Cluster:
 						#self.node[hostname].self_heal_enabled = True
 						self.sh_enabled += 1
 						
-		self.volume_count = len(self.volume)
-		self.brick_count  = len(self.brick)
+		#self.volume_count = len(self.volume)
+		#self.brick_count  = len(self.brick)
+		
+		self.volume_count = Volume.volumeCount()
+		self.brick_count  = Brick.brickCount()
 
 	def setVersion(self):
 		""" Sets the current version and product identifier for this cluster """
@@ -713,6 +717,8 @@ class Cluster:
 class Node:
 	""" Node object, just used as a container as a parent for bricks """
 	
+	num_nodes = 0
+	
 	node_state = { '0':'down', '1':'up'}
 
 	def __init__(self,uuid,state,aliases):
@@ -733,12 +739,19 @@ class Node:
 			print "Creating a node object with uuid %s, with names of %s"%(self.uuid, str(self.alias_list))
 		# ------------------------------------------------------------------
 			
-
+		Node.num_nodes += 1
+	
+	@classmethod
+	def nodeCount(Node):
+		return Node.num_nodes    
 	
 
 class Volume:
 	""" Volume object, linking out to the bricks, and holding the description
-		of the volume's attributes """
+		of the volume's attributes 
+	"""
+	
+	num_volumes = 0
 		
 	# Vol states are 
 	# 	up		... all bricks online, operational
@@ -790,6 +803,13 @@ class Volume:
 		
 		self.client_count = 0
 		self.client_set = set()
+		
+		Volume.num_volumes += 1
+
+	@classmethod
+	def volumeCount(Volume):
+		return Volume.num_volumes
+
 
 	def brickUpdate(self,brick_xml):
 		""" method to update a volume's brick"""
@@ -1103,6 +1123,8 @@ class Volume:
 class Brick:
 	""" Brick object populated initially through vol info, and then updated
 		with data from a vol status <bla> detail command """
+	
+	num_bricks = 0
 		
 	def __init__(self, brick_path, node_instance, volume_name):
 		self.brick_path = brick_path
@@ -1119,6 +1141,13 @@ class Brick:
 		self.heal_count = 0
 		self.owning_volume = volume_name
 		#self.self_heal_enabled = False	# default to off
+		
+		Brick.num_bricks += 1
+
+	@classmethod
+	def brickCount(Brick):
+		return Brick.num_bricks
+
 
 	def update(self,state, size, free, fsname, device, mnt_options):
 		""" apply attributes to this brick """
