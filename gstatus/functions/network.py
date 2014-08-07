@@ -78,6 +78,45 @@ def isIP(host_string):
 	return response
 	
 
+def hostAliasList(host):
+	""" for any given host attempt to return an alias list of names/IP """
+	
+	alias_list = []
+	fqdn = ''
+	shortname = ''
+	ip_addr = ''
+	
+	alias_list.append(host)						
+	
+	if isIP(host):
+	
+		try:
+			fqdn = socket.gethostbyaddr(host)[0]
+			shortname = fqdn.split('.')[0]
+		except:		# could get "socket.herror: [Errno 1] Unknown host"
+			pass
+		alias_list.append(fqdn)
+		alias_list.append(shortname)
+		
+	else:
+		try:
+			if '.' in host:
+				shortname = host.split('.')[0]
+				alias_list.append(shortname)
+			else:
+				fqdn = socket.getfqdn(host)
+				alias_list.append(fqdn)
+			
+			ip_addr = socket.gethostbyname(host)
+		except:
+			pass
+
+		alias_list.append(ip_addr)
+						
+	return sorted(alias_list)
+	
+
+
 if __name__ == '__main__':
 	pass
 
