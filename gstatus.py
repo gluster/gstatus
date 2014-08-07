@@ -20,12 +20,12 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #  
-#  
+# 
+ 
 from 	optparse 	import OptionParser			# command line option parsing
 from 	datetime	import datetime
 import 	os
 
-#from 	gstatus.functions.syscalls	import issueCMD
 import 	gstatus.functions.config 	as cfg
 from 	gstatus.functions.utils		import displayBytes
 from 	gstatus.classes.gluster		import Cluster, Volume, Brick
@@ -127,10 +127,6 @@ def main():
 	cluster.updateState()
 	cluster.calcCapacity()
 
-	#active_nodes = cluster.activeNodes()
-	#active_bricks = cluster.activeBricks()
-	#active_self_heal = cluster.checkSelfHeal()
-	
 	cluster.healthChecks()
 	
 	if cluster.output_mode == 'console':
