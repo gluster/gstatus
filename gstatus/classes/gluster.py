@@ -639,18 +639,16 @@ class Cluster:
 			this_brick = self.brick[brick_path]
 			
 			if this_brick.device in brick_devs:
+				self.over_commit = 'Yes'
 				continue
 			brick_devs.append(this_brick.device)
 			self.raw_capacity += this_brick.size
 			self.used_capacity += this_brick.used
 		
-		# derive the clusters usable space from the volume(s)
+		# derive the clusters usable space from the volume definition(s)
 		for vol_name in self.volume:
 			this_volume = self.volume[vol_name]
 			self.usable_capacity += this_volume.usable_capacity
-		
-		self.over_commit = 'Yes' if self.usable_capacity > self.raw_capacity else 'No'
-			
 
 		
 	def __str__(self):
@@ -908,7 +906,10 @@ class Volume:
 				self.used_capacity = self.raw_used
 
 		# with the volume used and usable calculated, we can derive the %used
-		self.pct_used = (self.used_capacity / float(self.usable_capacity)) * 100
+		if self.usable_capacity > 0:
+			self.pct_used = (self.used_capacity / float(self.usable_capacity)) * 100
+		else:
+			self.pct_used = 0
 
 		# ----------------------------------------------------------------
 		# Now look at the brick status and volume type to derive the volume
