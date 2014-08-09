@@ -68,7 +68,7 @@ class Cluster:
 	attr_list = [	'status','glfs_version','node_count','nodes_active',
 					'volume_count','brick_count','bricks_active','volume_summary',
 					'sh_enabled','sh_active','raw_capacity','usable_capacity',
-					'client_count','used_capacity','product_name'
+					'client_count','used_capacity','product_name','over_commit'
 					]
 
 
@@ -102,6 +102,7 @@ class Cluster:
 		self.raw_capacity = 0
 		self.usable_capacity = 0
 		self.used_capacity = 0
+		self.over_commit = 'No'
 		
 		self.messages = []			# cluster error messages
 		
@@ -630,14 +631,27 @@ class Cluster:
 		
 	def calcCapacity(self):
 		""" update the cluster's overall capacity stats based on the
-			volume information """
+			brick information """
 		
+		# calculate the raw and used from the bricks		
+		brick_devs = []
+		for brick_path in self.brick:
+			this_brick = self.brick[brick_path]
+			
+			if this_brick.device in brick_devs:
+				continue
+			brick_devs.append(this_brick.device)
+			self.raw_capacity += this_brick.size
+			self.used_capacity += this_brick.used
+		
+		# derive the clusters usable space from the volume(s)
 		for vol_name in self.volume:
-			this_vol = self.volume[vol_name]
+			this_volume = self.volume[vol_name]
+			self.usable_capacity += this_volume.usable_capacity
 		
-			self.raw_capacity += this_vol.raw_capacity
-			self.usable_capacity += this_vol.usable_capacity
-			self.used_capacity += this_vol.used_capacity
+		self.over_commit = 'Yes' if self.usable_capacity > self.raw_capacity else 'No'
+			
+
 		
 	def __str__(self):
 		""" return a human readable form of the cluster object for processing 
