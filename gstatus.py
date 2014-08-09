@@ -42,10 +42,12 @@ def consoleMode():
 	print ("      Status: %s Capacity: %s(raw bricks)"%(status_msg.ljust(17),
 			displayBytes(cluster.raw_capacity,display_units)))
 		
-	print ("   Glusterfs: %s           %s(usable)"%(cluster.glfs_version.ljust(17),
-			displayBytes(cluster.usable_capacity,display_units)))	
-	
-	print ("%s%s(used)\n"%(" "*42,displayBytes(cluster.used_capacity,display_units)))
+	print ("   Glusterfs: %s           %s(raw used)"%(cluster.glfs_version.ljust(17),
+			displayBytes(cluster.used_capacity,display_units)))
+
+	print ("  OverCommit: %s           %s(defined to volumes)"%(cluster.over_commit.ljust(3),
+			displayBytes(cluster.usable_capacity,display_units)))
+
 	
 	if state_request:
 		
@@ -140,7 +142,7 @@ if __name__ == '__main__':
 	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.58")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.59")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information (-s with -v)")
