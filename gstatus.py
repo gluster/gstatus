@@ -45,8 +45,8 @@ def consoleMode():
 	print ("   Glusterfs: %s           %s(raw used)"%(cluster.glfs_version.ljust(17),
 			displayBytes(cluster.used_capacity,display_units)))
 
-	print ("  OverCommit: %s           %s(defined to volumes)"%(cluster.over_commit.ljust(3),
-			displayBytes(cluster.usable_capacity,display_units)))
+	print ("  OverCommit: %s%s%s(defined to volumes)"%(cluster.over_commit.ljust(3),
+			" "*25,displayBytes(cluster.usable_capacity,display_units)))
 
 	
 	if state_request:
