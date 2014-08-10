@@ -1,55 +1,57 @@
-[root@glfs35-1 gstatus]# gstatus
+[root@rhs1-1 gstatus-tests]# ./gstatus.py -s
  
-      Status: UNHEALTHY(5)      Capacity: 60.00 GiB(raw bricks)
-   Glusterfs: 3.5.0beta3                  50.00 GiB(usable)
+      Status: UNHEALTHY(5)      Capacity: 24.00 GiB(raw bricks)
+   Glusterfs: 3.4.0.59rhs                 7.00 GiB(raw used)
+  OverCommit: Yes                         41.00 GiB(usable from volumes)
 
-      -----------------------------------------------------------------
-
-[root@glfs35-1 gstatus]# gstatus -s
- 
-      Status: UNHEALTHY(5)      Capacity: 60.00 GiB(raw bricks)
-   Glusterfs: 3.5.0beta3                  50.00 GiB(usable)
-
-   Nodes    :  3/ 4		Volumes:  0 Up
-   Self Heal:  3/ 4		          1 Up(Degraded)
+   Nodes    :  4/ 5		Volumes:  0 Up
+   Self Heal:  4/ 4		          1 Up(Degraded)
    Bricks   :  6/ 8		          1 Up(Partial)
-                                          0 Down
+   Clients  :     4                       0 Down
+
 Status Messages
   - Cluster is UNHEALTHY
-  - Volume 'dist' is in a PARTIAL state, some data is inaccessible data, due to missing bricks
-  - WARNING -> Write requests may fail against volume 'dist'
-  - Cluster node 'glfs35-3' is down
-  - Brick glfs35-3:/gluster/brick1 in volume 'myvol' is down/unavailable
-  - Brick glfs35-3:/gluster/brick2 in volume 'dist' is down/unavailable
+  - Volume 'vol2' is in a PARTIAL state, some data is inaccessible data, due to missing bricks
+  - WARNING -> Write requests may fail against volume 'vol2'
+  - Cluster node 'rhs1-2' is down
+  - Brick rhs1-2:/rhs/brick1/vol2 in volume 'vol2' is down/unavailable
+  - Brick rhs1-2:/rhs/brick1/repl in volume 'repl' is down/unavailable
+
+
 
       -----------------------------------------------------------------
 
-[root@glfs35-1 gstatus]# gstatus -a
- 
-      Status: UNHEALTHY(5)      Capacity: 60.00 GiB(raw bricks)
-   Glusterfs: 3.5.0beta3                  50.00 GiB(usable)
+      Status: UNHEALTHY(5)      Capacity: 24.00 GiB(raw bricks)
+   Glusterfs: 3.4.0.59rhs                 7.00 GiB(raw used)
+  OverCommit: Yes                         41.00 GiB(usable from volumes)
 
-   Nodes    :  3/ 4		Volumes:  0 Up
-   Self Heal:  3/ 4		          1 Up(Degraded)
+   Nodes    :  4/ 5		Volumes:  0 Up
+   Self Heal:  4/ 4		          1 Up(Degraded)
    Bricks   :  6/ 8		          1 Up(Partial)
-                                          0 Down
-Volume Information
-	myvol            UP(DEGRADED) - 3/4 bricks up - Distributed-Replicate
-	                 Capacity: (0% used) 77.00 MiB/20.00 GiB (used/total)
-	                 Self Heal:  3/ 4   All files in sync
-	                 Protocols: glusterfs:on  NFS:off  SMB:off
+   Clients  :     4                       0 Down
 
-	dist             UP(PARTIAL)  - 3/4 bricks up - Distribute
-	                 Capacity: (0% used) 97.00 MiB/30.00 GiB (used/total)
+Volume Information
+	repl             UP(DEGRADED) - 3/4 bricks up - Distributed-Replicate
+	                 Capacity: (29% used) 5.00 GiB/17.00 GiB (used/total)
 	                 Self Heal: N/A
 	                 Protocols: glusterfs:on  NFS:on  SMB:on
+	                 Gluster Clients : 4
+
+	vol2             UP(PARTIAL)  - 3/4 bricks up - Distribute
+	                 Capacity: (30% used) 7.00 GiB/24.00 GiB (used/total)
+	                 Self Heal: N/A
+	                 Protocols: glusterfs:on  NFS:on  SMB:on
+	                 Gluster Clients : 4
+
 
 Status Messages
   - Cluster is UNHEALTHY
-  - Volume 'dist' is in a PARTIAL state, some data is inaccessible data, due to missing bricks
-  - WARNING -> Write requests may fail against volume 'dist'
-  - Cluster node 'glfs35-3' is down
-  - Brick glfs35-3:/gluster/brick1 in volume 'myvol' is down/unavailable
-  - Brick glfs35-3:/gluster/brick2 in volume 'dist' is down/unavailable
+  - Volume 'vol2' is in a PARTIAL state, some data is inaccessible data, due to missing bricks
+  - WARNING -> Write requests may fail against volume 'vol2'
+  - Cluster node 'rhs1-2' is down
+  - Brick rhs1-2:/rhs/brick1/vol2 in volume 'vol2' is down/unavailable
+  - Brick rhs1-2:/rhs/brick1/repl in volume 'repl' is down/unavailable
+
+
 
 
