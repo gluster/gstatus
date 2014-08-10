@@ -196,8 +196,13 @@ class Cluster:
 							alias_list)	
 			
 			# Pick a peer that's online to ask about this hosts details
-			if node_info['connected'] and online_peer == '':
+			if node_info['connected'] == '1' and online_peer == '':
 				online_peer = this_hostname
+				
+				# ------------------------------------------------------------------------------				
+				if cfg.debug:
+					print "defineNodes is using %s to get a 2nd view of the cluster"%(online_peer)
+				# ------------------------------------------------------------------------------				
 				
 							
 			# add this node object to the cluster objects 'dict'
