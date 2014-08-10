@@ -25,6 +25,7 @@
 from 	optparse 	import OptionParser			# command line option parsing
 from 	datetime	import datetime
 import 	os
+import 	sys
 
 import 	gstatus.functions.config 	as cfg
 from 	gstatus.functions.utils		import displayBytes
@@ -45,13 +46,12 @@ def consoleMode():
 	print ("   Glusterfs: %s           %s(raw used)"%(cluster.glfs_version.ljust(17),
 			displayBytes(cluster.used_capacity,display_units)))
 
-	print ("  OverCommit: %s%s%s(defined to volumes)"%(cluster.over_commit.ljust(3),
+	print ("  OverCommit: %s%s%s(usable from volumes)"%(cluster.over_commit.ljust(3),
 			" "*25,displayBytes(cluster.usable_capacity,display_units)))
 
-	
 	if state_request:
 		
-		print ("   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
+		print ("\n   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
 				%(cluster.nodes_active,cluster.node_count,
 				cluster.volume_summary['up']))
 
@@ -63,13 +63,13 @@ def consoleMode():
 				%(cluster.bricks_active,cluster.brick_count,
 				cluster.volume_summary['partial']))
 
-		print ("   Clients  :  %4d%s%2d Down\n"%
+		print ("   Clients  :  %4d%s%2d Down"%
 				(cluster.client_count,
 				" "*22,
 				cluster.volume_summary['down']))
 
 	if volume_request:
-		print "Volume Information"
+		print "\nVolume Information"
 		
 		for vol_name in cluster.volume:
 			
@@ -98,7 +98,7 @@ def consoleMode():
 				print
 				
 	if state_request:
-		print "Status Messages"
+		print "\nStatus Messages"
 		if cluster.messages:
 			
 			# Add the current cluster state as the first message to display
@@ -124,13 +124,21 @@ def main():
 		# add some spacing to make the output stand out more
 		print " "			
 
-	
+	# setup up the cluster object structure
 	cluster.initialise()
-	cluster.updateState()
+	
+	# run additional commands to get current state
+	cluster.updateState(no_self_heal)
+	
+	# use the bricks to determine overall cluster disk capacity
 	cluster.calcCapacity()
 
+	# perform checks on the clusters state
 	cluster.healthChecks()
 	
+	
+	# Now with the object model complete, we can provide the info
+	# to the user
 	if cluster.output_mode == 'console':
 		consoleMode()
 	
@@ -145,6 +153,7 @@ if __name__ == '__main__':
 	parser = OptionParser(usage=usageInfo,version="%prog 0.59")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
+	parser.add_option("-n","--no-selfheal",dest="selfheal", action="store_true",default=False,help="turn of self heal backlog checks (faster)")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information (-s with -v)")
 	parser.add_option("-u","--units",dest="units",choices=['bin','dec'],help="display capacity units in DECimal or BINary format (GB vs GiB)")
 	parser.add_option("-l","--layout",dest="layout",action="store_true",default=False,help="show brick layout when used with -v, or -a")
@@ -157,21 +166,35 @@ if __name__ == '__main__':
 	cfg.debug = True if options.debug_on else False
 	
 	state_request = options.state
+	
 	volume_request = options.volumes
 	
 	volume_layout = options.layout
+
+	no_self_heal = options.selfheal
 	
 	display_units = options.units if options.units else 'bin'
 	
 	volume_list = []				# empty list of vols = show them all 
 	
+	
+	# default behaviours
 	if volume_request and args:
 		volume_list = args
-		
 	
+	if state_request:
+		no_self_heal = True
+		
 	if options.everything:
 		state_request = True
 		volume_request = True
+
+	if options.output_mode != 'console':
+		no_self_heal = True
+
+	# no arguments provided - turn of the self heal check
+	if len(sys.argv) == 1:
+		no_self_heal = True
 
 	# Create a cluster object. This simply creates the structure of 
 	# the object and populates the glusterfs version 

@@ -87,10 +87,7 @@ class Cluster:
 				
 		self.node={}			# dict of node objects indexed uuid
 		
-		#self.node_names = []	
 		self.nodes_down = 0
-		#self.localhost = ''		# name of the current host running the 
-								# tool from gluster's perspective
 								
 		self.localUUID = ''
 		
@@ -105,10 +102,6 @@ class Cluster:
 		self.over_commit = 'No'
 		
 		self.messages = []			# cluster error messages
-		
-									## flag showing whether the cluster
-		#self.name_based = True		# was formed based on name or IP
-		#self.fqdn_based = True
 		
 		self.has_volumes = False		
 		self.status = "healthy"				# be optimistic at first :)	
@@ -125,37 +118,15 @@ class Cluster:
 		
 		self.setVersion()
 		
-		
-		# cluster status is either healthy/unhealthy or potentially down
-		# (although a down cluster means all nodes are non-responsive)
-		#
-		# unhealthy 
-		#		a node is down
-		#		a volume is in partial state (multiple bricks down)
-		#
-		# down
-		#		all nodes in the cluster are down
-								
-								
-								
 	
 	def initialise(self):
 		""" call the node, volume 'generator' to create the child objects 
 			(bricks are created within the volume logic) """
 		
-		#self.queryVolFiles()			# populate node names and type
-										# by looking at the vol files. This
-										# just 'registers' the nodes as being
-										# members of the cluster. defineNodes 
-										# then uses this list to assign state
-										# to each of the nodes (up,down)
 	
 		self.has_volumes = True if glob.glob('/var/lib/glusterd/vols/*/trusted-*-fuse.vol') else False
-		
-		
 	
-		# has_volumes is defined in the queryVolFiles call, so the logic 
-		# here is that if we have seen vol files, then it's ok to
+		# if has_volumes is populated we have vol files, then it's ok to 
 		# run the queries to define the node and volume objects
 		if self.has_volumes:
 			
@@ -501,7 +472,7 @@ class Cluster:
 				
 		return self.sh_enabled
 
-	def updateState(self):
+	def updateState(self,no_self_heal):
 		""" update the state of the cluster by processing the output of 'vol status' commands
 		
 			- vol status all detail --> provides the brick info (up/down, type), plus volume capacity
@@ -607,7 +578,8 @@ class Cluster:
 									self.node[uuid].self_heal_active = False
 
 					# update the self heal flags, based on the vol status
-					self.volume[volume_name].updateSelfHeal(self.output_mode)
+					if not no_self_heal:
+						self.volume[volume_name].updateSelfHeal(self.output_mode)
 					
 					
 		
@@ -676,7 +648,13 @@ class Cluster:
 						data_string += "%s=%s,"%(key,item_value)
 						
 		if self.output_mode == 'json':
+			summary_list = []
+			for vol_name in self.volume:
+				this_volume = self.volume[vol_name]
+				summary_list.append(this_volume.volume_summary)
+			data['volume_summary'] = summary_list	
 			data_string = json.dumps(data,sort_keys=True)
+
 			
 		elif self.output_mode == 'keyvalue':
 			data_string = data_string[:-1]
@@ -798,6 +776,8 @@ class Volume:
 		self.replica_set_state=[]  	# list show number of bricks offline in each repl set
 		self.status_string = ''
 
+		self.volume_summary = dict()	# desc
+	
 		self.options = {} 
 		self.raw_capacity = 0
 		self.raw_used = 0
@@ -951,6 +931,12 @@ class Volume:
 				# straight to a 'partial' availability state
 				if up_bricks != total_bricks:
 					self.volume_state += '(partial) '
+
+		self.volume_summary['volume_name']=self.name
+		self.volume_summary['state']=self.volume_state
+		self.volume_summary['usable_capacity'] = self.usable_capacity
+		self.volume_summary['used_capacity'] = self.used_capacity
+	
 	
 	def numBricks(self):
 		""" return the number of bricks in the volume """
