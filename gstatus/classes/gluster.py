@@ -435,7 +435,7 @@ class Cluster:
 		for node_name in self.node:
 			this_node = self.node[node_name]
 			if this_node.state != '1':
-				self.messages.append("Cluster node '%s' is down"%(node_name))
+				self.messages.append("Cluster node '%s' is down"%(this_node.nodeName()))
 				self.status = 'unhealthy'
 		
 		# 3. check the bricks
@@ -735,6 +735,13 @@ class Node:
 	def nodeCount(Node):
 		return Node.num_nodes    
 	
+	def nodeName(self):
+		"""
+		Return a shortname or IP for this node
+		"""
+		# if the shortname is not blank, we return that otherwise pass 
+		# back the IP address of the node
+		return self.alias_list[1] if self.alias_list[1] != '' else self.alias_list[0]
 
 class Volume:
 	""" Volume object, linking out to the bricks, and holding the description
