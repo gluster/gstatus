@@ -38,7 +38,7 @@ Dependencies
 
 Installation
 ============
-Installing the two can be done in two ways, through python-seuptools or simply
+Installing the tool can be done in two ways, through python-seuptools or simply
 by running the main script (gstatus.py) directly.
 
 * Using python-setuptools
@@ -71,10 +71,8 @@ data availability of the volume. For example, even without replication the
 loss of a single brick in the volume will not cause the volume itself to be
 unavilable, but instead manifest as inaccessible files in the filesystem.
  
-To make more sense of the impact the brick availability has to the volume 
-presented to the application, the gstatus command introduces some additional 
-status descriptions, that define the volumes state in terms of data 
-availability.
+To help understand the impact a brick or node outage can have on data access,
+gstatus introduces some additional volume status descriptions.
 
 UP
 Volume is started and available, all bricks are up
@@ -109,19 +107,25 @@ Options:
   -h, --help            show this help message and exit
   -s, --state           show highlevel health of the cluster
   -v, --volume          volume info (default is ALL, or supply a volume name)
-  -a, --all             show all cluster information
+  -n, --no-selfheal     turn of self heal backlog checks (faster)
+  -a, --all             show all cluster information (-s with -v)
   -u UNITS, --units=UNITS
                         display capacity units in DECimal or BINary format (GB
                         vs GiB)
   -l, --layout          show brick layout when used with -v, or -a
+  -o OUTPUT_MODE, --output-mode=OUTPUT_MODE
+                        produce output in different formats - json, keyvalue
+                        or console(default)
+  -D, --debug           turn on debug mode
+
 
 
 * Understanding the output
 
-- Simply invoking gstatus without any options, will give a 2 line summary of
+- Simply invoking gstatus without any options, will give a 3 line summary of
   the cluster. This will tell you overall health, capacity and gluster version.
   If there are issues detected in the cluster, the UNHEALTHY state will be 
-  suffixed by a number in brackets - the number documents the number of errors
+  suffixed by a number in brackets - the number denotes the number of errors
   detected within the cluster.
 
 - Using -a will show high level cluster elements, as well as volume information
@@ -133,28 +137,41 @@ Options:
   cluster has 4 nodes, but only 2 are in an up state.
 
   e.g.
-  [root@glfs35-1 gstatus]# gstatus -a
+[root@rhs1-1 gstatus-tests]# gstatus
+   
+      Status: HEALTHY           Capacity: 32.00 GiB(raw bricks)
+   Glusterfs: 3.4.0.59rhs                 10.00 GiB(raw used)
+  OverCommit: Yes                         48.00 GiB(usable from volumes)
+
+[root@rhs1-1 gstatus-tests]# gstatus -a
  
-        Status: HEALTHY           Capacity: 80.00 GiB(raw bricks)
-     Glusterfs: 3.5.0beta3                  60.00 GiB(usable)
+      Status: HEALTHY           Capacity: 32.00 GiB(raw bricks)
+   Glusterfs: 3.4.0.59rhs                 10.00 GiB(raw used)
+  OverCommit: Yes                         48.00 GiB(usable from volumes)
 
-     Nodes    :  2/ 4		Volumes:  0 Up
-     Self Heal:  2/ 4		          1 Up(Degraded)
-     Bricks   :  6/ 8		          1 Up(Partial)
-                                          0 Down
+   Nodes    :  5/ 5		Volumes:  2 Up
+   Self Heal:  5/ 4		          0 Up(Degraded)
+   Bricks   :  8/ 8		          0 Up(Partial)
+   Clients  :     5                       0 Down
 
+<snip>
 
 - Capacity information is derived from the brick information taken from a 
   'vol status detail' command. The accuracy of this number therefore depends
   on the nodes/bricks being all up - elements missing from the configuration
   will simply be missing from the calculation.
 
+- A 'flag' called 'OverCommit' is provided that indicates whether a brick is
+  used by multiple volumes. Although technically valid, this exposes the 
+  user to capacity conflicts across different volumes when quota's are not used.
+
 - running the tool with the -l flag (with -a, or -v) will show a line diagram
-  depicting the brick layout within the volume. This is a useful visualisation
-  and that when combined with the brick's state (up or down), gives you an
-  indication of the impact a brick down event has to data access within the 
-  volume. The idea itself is inspired by work of Fred van Zwieten and 
-  Niels De Vos in the 'lsgvt' project.
+  depicting the brick layout within the volume. This feature was is inspired 
+  by work of Fred van Zwieten and Niels De Vos in the 'lsgvt' project.
+
+TIP: Normally for a volume listing, gstatus will issue a "vol heal X info"to show the 
+user any heal backlog. This takes more time, so using -n (e.g. gstatus -an) 
+can be used to skip this check, making the command faster to run.
 
 
 The examples directory included in the archive contains a number of scenarios
@@ -174,47 +191,9 @@ Known Issues
    timeout is honoured in gluster, when the tool is invoked within 30secs of a
    node shutdown.
    
-2) For some reason(?), some gluster peer definitions end up as IP not name based
-   when the actual probe was done using the name. This causes a problem to gstatus
-   since it has a volume definition refering to a name, but a peer status result
-   that refers to an IP. This results in a 'keyerror'. To fix, you just need to 
-   correct the peer definition, by using peer probe again on the IP based node to 
-   ensure a name is used. 
-   
-   eg.
-   
-   4 node cluster, node ".11" has all the nodes defined correctly, but looking at 
-   peer status on the other nodes (.12,.13,.14) they all point to the .11 node by IP 
-   not name.
-   To remedy, login to each of the nodes (.12,.13,.14), and peer probe the .11 node
-   again by it's correct name (i.e. the name used for this node in the volume definitions)
-   
-   This is a good response - notice each hostname is a name not IP
-   [root@ip-10-100-1-11 ~]# gluster peer status 
-   Number of Peers: 3
-   Hostname: ip-10-100-2-12
-   Uuid: 4e8680e0-7b2d-481a-a3f6-6df09915cfcf
-   State: Peer in Cluster (Connected)
-   Hostname: ip-10-100-1-13
-   Uuid: 0f492e87-7fd2-4c9e-956c-8a1de2d19760
-   State: Peer in Cluster (Connected)
-   Hostname: ip-10-100-2-14
-   Uuid: f62aca71-4d9b-4d30-b40c-aa02bce08a82
-   State: Peer in Cluster (Connected)
-   
-   now looking at one of the other nodes, to illustrate the 'bad' response
-   [root@ip-10-100-2-14 gstatus]# gluster peer status 
-   Number of Peers: 3
-   Hostname: ip-10-100-2-12
-   Uuid: 4e8680e0-7b2d-481a-a3f6-6df09915cfcf
-   State: Peer in Cluster (Connected)
-   Hostname: ip-10-100-1-13
-   Uuid: 0f492e87-7fd2-4c9e-956c-8a1de2d19760
-   State: Peer in Cluster (Connected)
-   Hostname: 10.100.1.11       <-- notice this is IP not name based for some reason?
-   Uuid: ba991d97-7bae-4ecc-9758-2715c7df8de3
-   State: Peer in Cluster (Connected)	
-   
-   to fix
-   peer probe <name>
+2) Normally every node will be capacity nodes. However, when nodes are added to 
+   the cluster for quorum purposes, the Self Heal field shows more nodes with Self 
+   Heal active than needed. This is due to the arbitration nodes also running the 
+   self head daemon.
+
  
