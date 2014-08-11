@@ -27,7 +27,7 @@ from 	decimal import *
 
 
 from 	gstatus.functions.syscalls	import 	issueCMD
-from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost, hostToIP,hostAliasList
+from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost, hostToIP,hostAliasList,getIPv4Addresses
 from 	gstatus.functions.utils		import 	displayBytes
 
 import 	gstatus.functions.config 	as cfg
@@ -183,7 +183,6 @@ class Cluster:
 		xml_root = ETree.fromstring(xml_string)
 
 		peer_list = xml_root.findall('.//peer')
-		online_peer = ''
 		
 		# len(peer_list) + 1 = size of trusted pool (cluster)		
 		for peer in peer_list:
@@ -195,16 +194,7 @@ class Cluster:
 			new_node = Node(node_info['uuid'], node_info['connected'],
 							alias_list)	
 			
-			# Pick a peer that's online to ask about this hosts details
-			if node_info['connected'] == '1' and online_peer == '':
-				online_peer = this_hostname
-				
-				# ------------------------------------------------------------------------------				
-				if cfg.debug:
-					print "defineNodes is using %s to get a 2nd view of the cluster"%(online_peer)
-				# ------------------------------------------------------------------------------				
-				
-							
+						
 			# add this node object to the cluster objects 'dict'
 			self.node[node_info['uuid']] = new_node
 			
@@ -217,19 +207,15 @@ class Cluster:
 					 
 		local_connected = '1' if portOpen('localhost',24007) else '0'
 		local_hostname = ''
+		alias_list = []		
 		
-		(rc, peer_xml) = issueCMD("gluster --remote-host=%s peer status --xml"%(online_peer))
-		xml_string = ''.join(peer_xml)
-		xml_root = ETree.fromstring(xml_string)
-		peer_list = xml_root.findall('.//peer')
-		
-		alias_list = []
-		for peer in peer_list:
-			peer_info = getAttr(peer,field_list)
-			if peer_info['uuid'] == local_uuid:
-				local_hostname = peer_info['hostname']
-				alias_list = hostAliasList(peer_info['hostname'])
-				break
+		if cfg.debug:
+			print "defineNodes using local IP's to determine alias names for the localhost"
+			
+		local_ip_list = getIPv4Addresses()			# Grab all IP's
+		for ip in local_ip_list:
+			alias_list += hostAliasList(ip)			
+			
 				
 		
 		if alias_list:
@@ -238,7 +224,7 @@ class Cluster:
 							
 			self.node[local_uuid] = new_node
 			self.localUUID = local_uuid	
-			#self.node_count = len(self.node)			
+			
 			self.node_count = Node.nodeCount()
 			
 		else:
@@ -453,6 +439,9 @@ class Cluster:
 				self.messages.append("Brick %s in volume '%s' is down/unavailable"%(brick_name, this_brick.owning_volume))
 			
 			# 3.2 check for best practice goes here (minor error messages - FUTURE)
+		
+		if self.bricks_active < Brick.brickCount():
+			self.messages.append("INFO -> Not all bricks are online, so capacity provided is NOT accurate")
 			
 			
 		# 4. Insert your checks HERE!
