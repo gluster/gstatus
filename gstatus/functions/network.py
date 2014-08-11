@@ -25,6 +25,7 @@
 import 	gstatus.functions.config as cfg
 
 import 	socket
+import 	netifaces
 
 
 def portOpen(hostname, port, scan_timeout=0.05):
@@ -114,6 +115,24 @@ def hostAliasList(host):
 		alias_list.append(ip_addr)
 						
 	return sorted(alias_list)
+
+def getIPv4Addresses():
+	""" return a list of ipv4 addresses on this host from ethX and bondX
+		AF_INET = ipv4, AF_INET6 = ipv6
+	"""
+	ip_list =[]
+	
+	interface_list = [ iface for iface in netifaces.interfaces() if iface[0:3] in ['eth','bon']]
+	
+	for interface in interface_list:
+		link = netifaces.ifaddresses(interface)
+		if netifaces.AF_INET in link:
+			ipv4List = link[netifaces.AF_INET]
+			for ip in ipv4List:
+				ip_list.append(ip['addr'])
+	
+	return ip_list
+	
 	
 
 
