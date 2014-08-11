@@ -162,7 +162,7 @@ class Cluster:
 	def defineNodes(self):
 		""" 
 		define the nodes present in the trusted pool by using peer status
-		against this host and a remote host in the pool
+		against this host 
 		"""
 		
 		if self.output_mode == 'console':
@@ -304,6 +304,9 @@ class Cluster:
 					print "defineVolumes. Adding brick %s"%(brick_path)
 				
 				node_uuid = self.getNode(hostname)
+				
+				# add this bricks owning node to the volume's attributes
+				new_volume.node[node_uuid] = self.node[node_uuid]
 				
 				new_brick = Brick(brick_path, self.node[node_uuid], new_volume.name)
 
@@ -744,7 +747,7 @@ class Volume:
 	
 	num_volumes = 0
 		
-	# Vol states are 
+	# Volume states are -
 	# 	up		... all bricks online, operational
 	# 	up(partial)	... one or more bricks offline, but replica in place
 	# 	up(degraded) ... at least one replica set is offline
@@ -777,8 +780,11 @@ class Volume:
 		self.replica_set_state=[]  	# list show number of bricks offline in each repl set
 		self.status_string = ''
 
-		self.volume_summary = dict()	# desc
-	
+		self.volume_summary = dict()	# high level description of the volume, used in 
+										# json output
+
+		self.node = {}				# dict indexed by uuid pointing to node's within this volume
+		
 		self.options = {} 
 		self.raw_capacity = 0
 		self.raw_used = 0
@@ -982,6 +988,9 @@ class Volume:
 			
 			total_heal_count = 0
 			
+			# in gluster 3.4 even though the cluster and bricks are defined with IP addresses
+			# the vol heal can return an fqdn for the hostname - so we have to account for that
+			
 			for line in vol_heal_output:
 
 				if line.lower().startswith('brick'):
@@ -998,21 +1007,43 @@ class Volume:
 					heal_count = int(line.split(':')[1])
 					
 					try:
+						
 						self.brick[brick_path].heal_count = heal_count
 						if cfg.debug:
 							print "updateSelfHeal. brick path from self heal matched brick object successfully"
 							
 					except KeyError:
-						if cfg.debug:
-							print "updateSelfHeal. brick path from self heal mismatch, attempting shortname matching"
-							
-						brick_path = node.split('.')[0] + ":" + path_name.rstrip('/')
 						
 						if cfg.debug:
-							print "updateSelfHeal. brick path match successful using shortname"
+							print "updateSelfHeal. brick path from self heal != any brick object, processing nodes to locate the brick"
 							
+						# cycle though the nodes associated with this volume 
+						match_found = False
+						for uuid in self.node:
+							
+							# if this node does NOT match the node in the brickpath, skip it
+							if not node in self.node[uuid].alias_list:
+								continue
+								
+							# now convert the brickpath to something usable
+							for alias in self.node[uuid].alias_list:
+								new_path = alias + ":" + path_name.rstrip('/')
+								if new_path in self.brick:
+									brick_path = new_path
+									match_found = True
+									break	
+							
+							if match_found:
+								break
+					
+				
 						try:
+							
+							if cfg.debug:
+								print "updateSelfHeal. using brick path match of %s"%(brick_path)
+							
 							self.brick[brick_path].heal_count = heal_count
+
 						except:
 							print "updateSelfHeal.Unable to apply self heal stats due to %s not matching existing"%(brick_path)
 							print "brick objects, and can not continue."						
