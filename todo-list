@@ -60,7 +60,6 @@ To Do List / Change Log
   - added -n option to skip self heal info gathering
   - misc doc updates and refresh of examples directory
   
-
   
 0.6 planned
   - add task info to the volume state to show when rebalance is active
