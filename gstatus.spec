@@ -1,6 +1,6 @@
 Name:		gstatus
 Version:	0.5
-Release:	0.8%{?dist}
+Release:	0.9%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
@@ -14,7 +14,9 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires:	python2-devel
 BuildRequires:	python-setuptools
+
 Requires:	/usr/sbin/gluster
+Requires:	python-netifaces
 Requires:	glusterfs >= 3.4
 
 %if 0%{?rhel} && 0%{?rhel} <= 6
