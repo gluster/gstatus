@@ -49,7 +49,7 @@ To Do List / Change Log
   - updated hostname resolution to use shortname and FQDN
   - add code in main gluster module  for debug.  
   
-0.59 August 2014
+0.60 August 2014
   - refactor the node definition logic (now based on uuid not name)
   - fix - supports cluster defined on fqdn and volumes using shortnames and IP based clusters
   - fix - corrected cluster capacity calculations when brick(s) used by multiple volumes
@@ -61,7 +61,7 @@ To Do List / Change Log
   - misc doc updates and refresh of examples directory
   
   
-0.6 planned
+0.65 planned
   - add task info to the volume state to show when rebalance is active
   - provide threshold triggers
     - space usage triggers on volumes 
