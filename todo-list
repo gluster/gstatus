@@ -49,9 +49,22 @@ To Do List / Change Log
   - updated hostname resolution to use shortname and FQDN
   - add code in main gluster module  for debug.  
   
+0.59 August 2014
+  - refactor the node definition logic (now based on uuid not name)
+  - fix - supports cluster defined on fqdn and volumes using shortnames and IP based clusters
+  - fix - corrected cluster capacity calculations when brick(s) used by multiple volumes
+  - added capacity overcommit flag if the same device is referenced by multiple bricks
+  - added overcommit status field added to output (console,keyvalue,json)
+  - added volume stats to json output mode  
+  - added info message when bricks are missing to confirm the capacity info is inaccurate
+  - added -n option to skip self heal info gathering
+  - misc doc updates and refresh of examples directory
+  
+
+  
 0.6 planned
   - add task info to the volume state to show when rebalance is active
-  - add config file support
+  - provide threshold triggers
     - space usage triggers on volumes 
     - space usage trigger on bricks
 
@@ -68,7 +81,7 @@ Items being considered
 
 
 Known BUGS
-- invocation after a node down event will block vol status. This needs to be 
+- invocation immediately after a node down event will block vol status. This needs to be 
   detected and the run aborted to prevent the wrong information being shown to
   the user
 - gluster is not returning valid xml when nodes are not present in the config. The problem gets worse with cluster size, and disruption. Current testing has nly allowed 4 node tests to be performed. WORKED AROUND 0.4 onwards
