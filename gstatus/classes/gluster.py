@@ -607,10 +607,14 @@ class Cluster:
 		for brick_path in self.brick:
 			this_brick = self.brick[brick_path]
 			
-			if this_brick.device in brick_devs:
+			node = this_brick.node_name
+			device_path = node + ":" + this_brick.device
+			
+			if device_path in brick_devs:
 				self.over_commit = 'Yes'
 				continue
-			brick_devs.append(this_brick.device)
+				
+			brick_devs.append(device_path)
 			self.raw_capacity += this_brick.size
 			self.used_capacity += this_brick.used
 		
