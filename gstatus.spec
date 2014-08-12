@@ -1,6 +1,6 @@
 Name:		gstatus
-Version:	0.6
-Release:	0.0%{?dist}
+Version:	0.60
+Release:	0%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
@@ -9,6 +9,7 @@ URL:		https://forge.gluster.org/gstatus
 
 # download from https://forge.gluster.org/gstatus/gstatus/archive-tarball/v%{version}
 # rename to gstatus-%{version}.tar.gz
+
 Source0:	%{name}-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
@@ -26,13 +27,18 @@ Requires:	glusterfs >= 3.4
 %endif
 
 %description
-CLI command to provide a status check on the cluster’s health, providing a view
-of node, volume and brick up/down states, volume status (online, degraded etc)
-and capacity information by volume (usable, used).
+CLI command to provide a status check on the cluster’s health, providing
+a view of node, volume state (up, degraded, partial or down), brick 
+up/down states and capacity information by volume (usable, used).
 
-Errors detected, will be listed in plain english with the potential to extend
-to write the output in xml form for integration with automated checks.
+In addition to the interactive model, a json or keyvalue output option 
+is also available through '-o json|keyvalue'. By utilising -o, you can 
+log the state of the cluster to a file, and interpret with Splunk, 
+Logstash or nagios/zabbix.
 
+Errors detected, are listed in plain english together and provide an
+easy way to assess the impact to a service, based on a disruptive event 
+within the trusted pool (cluster).
 
 %prep
 %setup -q -n %{name}-%{name}
@@ -44,7 +50,7 @@ CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
 
 %install
 rm -rf %{buildroot}
-%{__python} setup.py install --skip-build --root %{buildroot} --install-scripts %{_sbindir}
+%{__python} setup.py install --skip-build --root %{buildroot} --install-scripts %{_bindir}
 
 
 %clean
@@ -54,12 +60,31 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %doc README examples
-%{_sbindir}/gstatus
+%{_bindir}/gstatus
 %{python2_sitelib}/gstatus/
 %{python2_sitelib}/gstatus-%{version}-*.egg-info/
 
 
 %changelog
+
+* Mon Aug 11 2014 Paul Cuzner <pcuzner@redhat.com> 0.6
+- refactor the node definition logic (now based on uuid not name)
+- fix - supports cluster defined on fqdn and volumes using shortnames and IP based clusters
+- fix - corrected cluster capacity calculations when brick(s) used by multiple volumes
+- added capacity overcommit flag if the same device is referenced by multiple bricks
+- added overcommit status field added to output (console,keyvalue,json)
+- added volume stats to json output mode  
+- added info message when bricks are missing to confirm the capacity info is inaccurate
+- added -n option to skip self heal info gathering
+- misc doc updates and refresh of examples directory
+
+* Mon Jun 23 2014 Paul Cuzner  <pcuzner@redhat.com> 0.5-6.0
+- Added -D debug option for problem analysis
+- config module added for global vars across modules
+- added code to allow for arbitration nodes in the trusted pool
+- added product name (RHS version or Community version) to -o output
+- fix - workaround added for silent failure of gluster vol status clients
+
 * Wed Apr 2 2014 Paul Cuzner  <pcuzner@redhat.com> 0.5-0.1
 - updated to account for fqdn cluster definitions 
 
