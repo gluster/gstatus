@@ -1,6 +1,6 @@
 Name:		gstatus
 Version:	0.60
-Release:	0%{?dist}
+Release:	1%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
@@ -67,7 +67,10 @@ rm -rf %{buildroot}
 
 %changelog
 
-* Mon Aug 11 2014 Paul Cuzner <pcuzner@redhat.com> 0.6
+* Tue Aug 12 2014 Paul Cuzner <pcuzner@redhat.com> 0.60.1
+- minor fix for cluster capacity calculation
+
+* Mon Aug 11 2014 Paul Cuzner <pcuzner@redhat.com> 0.60
 - refactor the node definition logic (now based on uuid not name)
 - fix - supports cluster defined on fqdn and volumes using shortnames and IP based clusters
 - fix - corrected cluster capacity calculations when brick(s) used by multiple volumes
