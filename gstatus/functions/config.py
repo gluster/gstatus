@@ -31,6 +31,7 @@ def init():
 	
 	debug = False
 	min_version = 3.4
+	snapshot_version = 3.6
 	
 
 
