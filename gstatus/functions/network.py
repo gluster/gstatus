@@ -93,9 +93,25 @@ def hostAliasList(host):
 	
 		try:
 			fqdn = socket.gethostbyaddr(host)[0]
-			shortname = fqdn.split('.')[0]
-		except:		# could get "socket.herror: [Errno 1] Unknown host"
-			pass
+
+		except:		
+			# could get "socket.herror: [Errno 1] Unknown host"
+			# indicating that reverse DNS is not working for this IP
+			
+			# If this is an IP on the local machine, use gethostname()
+			if host in getIPv4Addresses():
+				fqdn=socket.gethostname()	
+			else:
+				# however, if the IP is foreign and not resolving check
+				# /etc/hosts for an answer
+				with open('/etc/hosts') as hosts_file:
+					ip_match = [host_entry for host_entry in hosts_file.readlines() if host in host_entry]
+				if ip_match:
+					fqdn = ip_match[0].split()[1]
+
+				
+		
+		shortname = fqdn.split('.')[0]
 		alias_list.append(fqdn)
 		alias_list.append(shortname)
 		
@@ -105,7 +121,7 @@ def hostAliasList(host):
 				shortname = host.split('.')[0]
 				alias_list.append(shortname)
 			else:
-				fqdn = socket.getfqdn(host)
+				fqdn = socket.gethostbyname_ex(host)[0]
 				alias_list.append(fqdn)
 			
 			ip_addr = socket.gethostbyname(host)
