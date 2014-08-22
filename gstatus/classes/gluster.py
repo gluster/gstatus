@@ -306,7 +306,14 @@ class Cluster:
 				node_uuid = self.getNode(hostname)
 				
 				# add this bricks owning node to the volume's attributes
-				new_volume.node[node_uuid] = self.node[node_uuid]
+				try:
+					new_volume.node[node_uuid] = self.node[node_uuid]
+					
+				except KeyError:
+					print "Unable to associate brick with a peer in the cluster, possibly due"
+					print "to name lookup failures. If the nodes are not registered (fwd & rev)"
+					print "to dns, add local entries for you cluster the /etc/hosts file"
+					sys.exit(16)
 				
 				new_brick = Brick(brick_path, self.node[node_uuid], new_volume.name)
 
