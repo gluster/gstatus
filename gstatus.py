@@ -41,13 +41,13 @@ def consoleMode():
 		status_msg = cluster.status.upper()
 
 	print ("      Status: %s Capacity: %s(raw bricks)"%(status_msg.ljust(17),
-			displayBytes(cluster.raw_capacity,display_units)))
+			displayBytes(cluster.raw_capacity,display_units).rjust(11)))
 		
 	print ("   Glusterfs: %s           %s(raw used)"%(cluster.glfs_version.ljust(17),
-			displayBytes(cluster.used_capacity,display_units)))
+			displayBytes(cluster.used_capacity,display_units).rjust(11)))
 
 	print ("  OverCommit: %s%s%s(usable from volumes)"%(cluster.over_commit.ljust(3),
-			" "*25,displayBytes(cluster.usable_capacity,display_units)))
+			" "*25,displayBytes(cluster.usable_capacity,display_units).rjust(11)))
 
 	if state_request:
 		
