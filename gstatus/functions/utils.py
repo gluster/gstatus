@@ -32,3 +32,12 @@ def displayBytes(inBytes, units='bin'):
 
 	raise ValueError('number too large')
 
+def getAttr(element,match_list):
+	""" function to convert an xml node element with attributes, to a dict """
+	
+	attr_list = {}
+	for node in element.getchildren():
+		if node.tag in match_list:
+			attr_list[node.tag] = node.text
+
+	return attr_list

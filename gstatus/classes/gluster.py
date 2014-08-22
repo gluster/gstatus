@@ -28,7 +28,7 @@ from 	decimal import *
 
 from 	gstatus.functions.syscalls	import 	issueCMD
 from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost, hostToIP,hostAliasList,getIPv4Addresses
-from 	gstatus.functions.utils		import 	displayBytes
+from 	gstatus.functions.utils		import 	displayBytes, getAttr
 
 import 	gstatus.functions.config 	as cfg
 
@@ -1234,14 +1234,12 @@ class Brick:
 
 		return fmtd
 
-
-
-def getAttr(element,match_list):
-	""" function to convert an xml node element with attributes, to a dict """
+class Snapshot:
 	
-	attr_list = {}
-	for node in element.getchildren():
-		if node.tag in match_list:
-			attr_list[node.tag] = node.text
+	num_snaphots = 0
+	
+	def __init__(self):
+		Snapshot.num_snaphots += 1
+		pass
 
-	return attr_list
+
