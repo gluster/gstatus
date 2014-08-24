@@ -28,7 +28,7 @@ from 	decimal import *
 
 from 	gstatus.functions.syscalls	import 	issueCMD
 from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost, hostToIP,hostAliasList,getIPv4Addresses
-from 	gstatus.functions.utils		import 	displayBytes, getAttr
+from 	gstatus.functions.utils		import 	displayBytes, getAttr, versionOK
 
 import 	gstatus.functions.config 	as cfg
 
@@ -68,9 +68,9 @@ class Cluster:
 	attr_list = [	'status','glfs_version','node_count','nodes_active',
 					'volume_count','brick_count','bricks_active','volume_summary',
 					'sh_enabled','sh_active','raw_capacity','usable_capacity',
-					'client_count','used_capacity','product_name','over_commit'
+					'client_count','used_capacity','product_name','over_commit',
+					'snapshot_count'
 					]
-
 
 	def __init__(self):
 
@@ -79,6 +79,9 @@ class Cluster:
 		self.node_count = 0
 		self.volume_count = 0
 		self.brick_count = 0 
+		self.snapshot_count = 0
+		self.snapshot_capable = False
+		
 		self.sh_enabled = 0		# sh = self heal
 		
 		self.nodes_active = 0
@@ -114,9 +117,9 @@ class Cluster:
 		self.client_set = set()
 		
 		self.product_name = ''		# Product identifier, RHS release info or
-									# Community
+		self.product_shortname = ''	# Community
 		
-		self.setVersion()
+		self.getVersion()
 		
 	
 	def initialise(self):
@@ -133,6 +136,18 @@ class Cluster:
 			self.defineNodes()
 			
 			self.defineVolumes()
+			
+			# if this cluster supports snapshots, take a look to see if 
+			# there are any
+			
+			self.snapshot_capable = versionOK(self.glfs_version, cfg.snapshot_support)
+			
+			if self.snapshot_capable:
+				
+				self.defineSnapshots()
+				
+				self.snapshot_count = Snapshot.snapCount()
+
 
 		else:
 			# no volumes in this cluster, print a message and abort
@@ -219,6 +234,9 @@ class Cluster:
 				
 		
 		if alias_list:
+			
+			alias_list.append('localhost')
+			
 			new_node = Node(local_uuid, local_connected,
 							alias_list)
 							
@@ -358,17 +376,42 @@ class Cluster:
 					for brick_path in new_volume.brick:
 						this_brick = self.brick[brick_path]
 						this_brick.node.self_heal_enabled = True
-						#(hostname,brick_fsname) = brick_path.split(':')
-						#self.node[hostname].self_heal_enabled = True
+
 						self.sh_enabled += 1
 						
-		#self.volume_count = len(self.volume)
-		#self.brick_count  = len(self.brick)
-		
+
 		self.volume_count = Volume.volumeCount()
 		self.brick_count  = Brick.brickCount()
 
-	def setVersion(self):
+	def defineSnapshots(self):
+		""" 
+		Process each of the discovered volumes to look for any
+		associated snapshots
+		"""
+		
+		# process each discovered volume
+		for volume_name in self.volume:
+			
+			this_volume = self.volume[volume_name]
+			
+			(rc, snap_info) = issueCMD("gluster snap list %s"%(volume_name))
+			
+			if rc == 0:
+				# process the snap information
+				if not snap_info[0].lower().startswith('no snapshots'):
+					for snap in snap_info:
+						snap_name = snap.strip()
+						new_snapshot = Snapshot(snap_name, this_volume, volume_name)
+						this_volume.snapshot_list.append(new_snapshot)
+					
+					this_volume.snapshot_count = len(this_volume.snapshot_list)
+				
+			if cfg.debug:
+				print "defineSnapshots. Volume '%s' has %d snapshots"%(volume_name, this_volume.snapshot_count)
+		
+
+
+	def getVersion(self):
 		""" Sets the current version and product identifier for this cluster """
 		(rc, versInfo) = issueCMD("gluster --version")
 		
@@ -377,20 +420,9 @@ class Cluster:
 		if os.path.exists('/etc/redhat-storage-release'):
 			with open('/etc/redhat-storage-release','r') as RHS_version:
 				self.product_name = RHS_version.readline().rstrip()
+				self.product_shortname = "RHSS v%s"%(self.product_name.split()[-1])
 		else:
-			self.product_name = "Community"
-
-
-	def glfsVersionOK(self, min_version):
-		
-		(min_major, min_minor) = str(min_version).split('.')
-		(host_major, host_minor) = self.glfs_version.split('.')[:2]
-		
-		if ( int(host_major) >= int(min_major) and 
-			int(host_minor) >= int(min_minor)):
-			return True
-		else:
-			return False
+			self.product_name = self.product_shortname = "Community"
 
 
 	def activeNodes(self):
@@ -813,6 +845,11 @@ class Volume:
 		
 		self.client_count = 0
 		self.client_set = set()
+		
+		self.snapshot_count = 0
+		self.snapshot_list =[]			# list of snapshot objects
+		self.max_snapshots = 256
+
 		
 		Volume.num_volumes += 1
 
@@ -1238,8 +1275,20 @@ class Snapshot:
 	
 	num_snaphots = 0
 	
-	def __init__(self):
-		Snapshot.num_snaphots += 1
-		pass
+	def __init__(self, snap_name, parent_volume, volume_name):
 
+		self.name = snap_name
+		self.parent_object = parent_volume
+		self.volume_name = volume_name
+		self.created = None
+		self.status = None
+		
+		if cfg.debug:
+			print "Creating a snapshot instance for volume '%s' called '%s'"%(volume_name, snap_name)
+
+		Snapshot.num_snaphots += 1	
+			
+	@classmethod
+	def snapCount(Snapshot):
+		return Snapshot.num_snaphots
 
