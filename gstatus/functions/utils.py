@@ -41,3 +41,37 @@ def getAttr(element,match_list):
 			attr_list[node.tag] = node.text
 
 	return attr_list
+
+
+def versionOK(this_version, target_version):
+	"""
+	Compare one version to another, returning a boolean for the src version
+	being >= target version
+	"""
+	
+	this_version = str(this_version)
+	target_version = str(target_version)
+	
+	# Account for version strings passes not in X.Y format
+	if this_version.count('.') > 1:
+		this_version = majorMinor(this_version)
+		
+	if target_version.count('.') > 1:
+		target_version = majorMinor(target_version)
+	
+	
+	(this_major, this_minor) = this_version.split('.')
+	(tgt_major, tgt_minor) = target_version.split('.')
+		
+	if ( int(this_major) >= int(tgt_major) and 
+		int(this_minor) >= int(tgt_minor)):
+		return True
+	else:
+		return False
+	
+def majorMinor(version_string):
+	""" 
+	return the major.minor of a full version string
+	"""
+	
+	return '.'.join(version_string.split('.')[:2])	
