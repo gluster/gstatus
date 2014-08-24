@@ -28,7 +28,7 @@ import 	os
 import 	sys
 
 import 	gstatus.functions.config 	as cfg
-from 	gstatus.functions.utils		import displayBytes
+from 	gstatus.functions.utils		import displayBytes, versionOK, majorMinor
 from 	gstatus.classes.gluster		import Cluster, Volume, Brick
 
 
@@ -40,15 +40,26 @@ def consoleMode():
 	else:
 		status_msg = cluster.status.upper()
 
-	print ("      Status: %s Capacity: %s(raw bricks)"%(status_msg.ljust(17),
+	# General Status Header
+	print ("     Product: %s  Capacity:%s(raw bricks)"%(cluster.product_shortname.ljust(17),
 			displayBytes(cluster.raw_capacity,display_units).rjust(11)))
-		
-	print ("   Glusterfs: %s           %s(raw used)"%(cluster.glfs_version.ljust(17),
+
+	print ("      Status: %s           %s(raw used)"%(status_msg.ljust(17),
 			displayBytes(cluster.used_capacity,display_units).rjust(11)))
 
-	print ("  OverCommit: %s%s%s(usable from volumes)"%(cluster.over_commit.ljust(3),
-			" "*25,displayBytes(cluster.usable_capacity,display_units).rjust(11)))
+	print ("   Glusterfs: %s%s%s(usable from volumes)"%(cluster.glfs_version.ljust(17),
+			" "*11,displayBytes(cluster.usable_capacity,display_units).rjust(11)))
 
+	if cluster.snapshot_capable:
+		snap_msg = "Snapshots: %s"%(str(cluster.snapshot_count).rjust(3))
+	else:
+		snap_msg = ""
+		
+	print ("  OverCommit: %s%s%s"%(cluster.over_commit.ljust(3)," "*15,snap_msg))
+
+
+
+	# Component Status
 	if state_request:
 		
 		print ("\n   Nodes    : %2d/%2d\t\tVolumes: %2d Up"
@@ -68,10 +79,11 @@ def consoleMode():
 				" "*22,
 				cluster.volume_summary['down']))
 
+	# Volume Breakdown
 	if volume_request:
 		print "\nVolume Information"
 		
-		for vol_name in cluster.volume:
+		for vol_name in sorted(cluster.volume):
 			
 			if len(volume_list) == 0 or vol_name in volume_list:
 				vol = cluster.volume[vol_name]
@@ -85,6 +97,10 @@ def consoleMode():
 					%(vol.pct_used,
 					displayBytes(vol.used_capacity,display_units),
 					displayBytes(vol.usable_capacity,display_units)))
+					
+				if cluster.snapshot_capable:
+					print "\t" + " "*17 + "Snapshots: %d"%(vol.snapshot_count)
+					
 				print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string))
 				print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
 					%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
@@ -93,7 +109,6 @@ def consoleMode():
 				if volume_layout:
 					print
 					vol.printLayout()	
-					
 					
 				print
 				
@@ -202,7 +217,7 @@ if __name__ == '__main__':
 	
 	cluster.output_mode = options.output_mode
 	
-	if cluster.glfsVersionOK(cfg.min_version):
+	if versionOK(cluster.glfs_version, cfg.min_version):
 		
 		main()
 		
