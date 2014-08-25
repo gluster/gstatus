@@ -165,7 +165,7 @@ if __name__ == '__main__':
 	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.60")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.61")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
 	parser.add_option("-n","--no-selfheal",dest="selfheal", action="store_true",default=False,help="turn of self heal backlog checks (faster)")

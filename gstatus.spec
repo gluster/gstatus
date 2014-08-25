@@ -1,6 +1,6 @@
 Name:		gstatus
-Version:	0.60
-Release:	1%{?dist}
+Version:	0.61
+Release:	0%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
