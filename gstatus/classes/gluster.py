@@ -373,12 +373,16 @@ class Cluster:
 
 				if heal_enabled:
 					
+					node_set = set()	# use a set to maintain a unique group of nodes
+					
 					for brick_path in new_volume.brick:
-						this_brick = self.brick[brick_path]
-						this_brick.node.self_heal_enabled = True
+							this_brick = self.brick[brick_path]
+							this_node = this_brick.node
+							node_set.add(this_node)
+							this_node.self_heal_enabled = True
 
-						self.sh_enabled += 1
-						
+					self.sh_enabled = len(node_set)
+					
 
 		self.volume_count = Volume.volumeCount()
 		self.brick_count  = Brick.brickCount()
@@ -607,14 +611,19 @@ class Cluster:
 									print "gstatus has been given an 'path' for a self heal daemon that"
 									print "does not correspond to a peer node, and can not continue\n"
 									exit(16)
+								
+								if self.node[uuid].self_heal_enabled:
 										
-								if node_state == '1':
-									self.node[uuid].self_heal_active = True
-								else:
-									self.node[uuid].self_heal_active = False
+									if node_state == '1':
+										self.node[uuid].self_heal_active = True
+									else:
+										self.node[uuid].self_heal_active = False
 
 					# update the self heal flags, based on the vol status
+					self.volume[volume_name].setSelfHealStats()		# high level info
+					
 					if not no_self_heal:
+						# now get low level info to check for heal backlog
 						self.volume[volume_name].updateSelfHeal(self.output_mode)
 					
 					
@@ -1023,7 +1032,7 @@ class Volume:
 				self.self_heal_string = 'DISABLED'
 				return
 				
-		self.self_heal_string = self.getSelfHealStats()
+
 		
 		if output_mode == 'console':
 			sys.stdout.write("Analysing Self Heal backlog for %s %s \n\r\x1b[A"%(self.name," "*20))
@@ -1110,7 +1119,7 @@ class Volume:
 			self.self_heal_string += " BACKLOG DATA UNAVAILABLE"
 
 			
-	def getSelfHealStats(self):
+	def setSelfHealStats(self):
 		""" return a string active/enable self heal states for the
 			nodes that support this volume """
 			
@@ -1124,8 +1133,9 @@ class Volume:
 				enabled += 1
 			if this_brick.node.self_heal_active:
 				active += 1
-			
-		return "%2d/%2d"%(active, enabled)
+		
+		self.self_heal_string = "%2d/%2d"%(active, enabled)
+
 
 	def printLayout(self):
 		""" print function used to show the relationships of the bricks in
