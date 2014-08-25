@@ -1003,6 +1003,7 @@ class Volume:
 		self.volume_summary['state']=self.volume_state
 		self.volume_summary['usable_capacity'] = self.usable_capacity
 		self.volume_summary['used_capacity'] = self.used_capacity
+		self.volume_summary['snapshot_count'] = self.snapshot_count
 	
 	
 	def numBricks(self):
