@@ -453,7 +453,7 @@ class Cluster:
 		# The idea here is to perform the most significant checks first
 		# so the message list appears in a priority order
 		
-		# 1. volumes in a down or partial state
+		# 1. Check the volumes
 		for volume_name in self.volume:
 			this_volume = self.volume[volume_name]
 			
@@ -467,15 +467,18 @@ class Cluster:
 				self.status = 'unhealthy'								
 		
 		
-		
-		# 2. nodes that are down
-		for node_name in self.node:
-			this_node = self.node[node_name]
+		# 2. Check for conditions detected at the node level
+		for uuid in self.node:
+			this_node = self.node[uuid]
 			if this_node.state != '1':
 				self.messages.append("Cluster node '%s' is down"%(this_node.nodeName()))
 				self.status = 'unhealthy'
+				
+			if this_node.self_heal_enabled != this_node.self_heal_active:
+				self.messages.append("Self heal daemon is down on %s"%(this_node.nodeName()))
+				self.status = 'unhealthy'
 		
-		# 3. check the bricks
+		# 3. Check the bricks
 		for brick_name in self.brick:
 			
 			this_brick = self.brick[brick_name]
