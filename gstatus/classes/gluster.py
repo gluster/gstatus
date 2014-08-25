@@ -515,7 +515,7 @@ class Cluster:
 				
 		return self.sh_enabled
 
-	def updateState(self,no_self_heal):
+	def updateState(self,self_heal_backlog):
 		""" update the state of the cluster by processing the output of 'vol status' commands
 		
 			- vol status all detail --> provides the brick info (up/down, type), plus volume capacity
@@ -625,7 +625,7 @@ class Cluster:
 					# update the self heal flags, based on the vol status
 					self.volume[volume_name].setSelfHealStats()		# high level info
 					
-					if not no_self_heal:
+					if self_heal_backlog:
 						# now get low level info to check for heal backlog
 						self.volume[volume_name].updateSelfHeal(self.output_mode)
 					

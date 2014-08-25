@@ -143,7 +143,7 @@ def main():
 	cluster.initialise()
 	
 	# run additional commands to get current state
-	cluster.updateState(no_self_heal)
+	cluster.updateState(self_heal_backlog)
 	
 	# use the bricks to determine overall cluster disk capacity
 	cluster.calcCapacity()
@@ -168,7 +168,7 @@ if __name__ == '__main__':
 	parser = OptionParser(usage=usageInfo,version="%prog 0.61")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
-	parser.add_option("-n","--no-selfheal",dest="selfheal", action="store_true",default=False,help="turn of self heal backlog checks (faster)")
+	parser.add_option("-b","--backlog",dest="selfheal", action="store_true",default=False,help="Look deeper at self heal state")
 	parser.add_option("-a","--all",dest="everything",action="store_true",default=False,help="show all cluster information (-s with -v)")
 	parser.add_option("-u","--units",dest="units",choices=['bin','dec'],help="display capacity units in DECimal or BINary format (GB vs GiB)")
 	parser.add_option("-l","--layout",dest="layout",action="store_true",default=False,help="show brick layout when used with -v, or -a")
@@ -186,7 +186,7 @@ if __name__ == '__main__':
 	
 	volume_layout = options.layout
 
-	no_self_heal = options.selfheal
+	self_heal_backlog = options.selfheal
 	
 	display_units = options.units if options.units else 'bin'
 	
@@ -198,18 +198,14 @@ if __name__ == '__main__':
 		volume_list = args
 	
 	if state_request:
-		no_self_heal = True
+		self_heal_backlog = False
 		
 	if options.everything:
 		state_request = True
 		volume_request = True
 
 	if options.output_mode != 'console':
-		no_self_heal = True
-
-	# no arguments provided - turn of the self heal check
-	if len(sys.argv) == 1:
-		no_self_heal = True
+		self_heal_backlog = False
 
 	# Create a cluster object. This simply creates the structure of 
 	# the object and populates the glusterfs version 
