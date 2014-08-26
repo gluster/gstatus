@@ -174,11 +174,13 @@ if __name__ == '__main__':
 	parser.add_option("-l","--layout",dest="layout",action="store_true",default=False,help="show brick layout when used with -v, or -a")
 	parser.add_option("-o","--output-mode",dest="output_mode",default='console',choices=['console','json','keyvalue'],help="produce output in different formats - json, keyvalue or console(default)")
 	parser.add_option("-D","--debug",dest="debug_on",action="store_true",help="turn on debug mode")
+	parser.add_option("-w","--without-progress",dest="progress",action="store_true",default=False,help="turn off progress updates to user during data gathering")
 	(options, args) = parser.parse_args()
 
 	# initialise any global variables
 	cfg.init()
 	cfg.debug = True if options.debug_on else False
+	cfg.no_progress_msgs = options.progress 
 	
 	state_request = options.state
 	

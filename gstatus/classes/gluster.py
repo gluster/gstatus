@@ -180,7 +180,7 @@ class Cluster:
 		against this host 
 		"""
 		
-		if self.output_mode == 'console':
+		if self.output_mode == 'console' and not cfg.no_progress_msgs:
 			# display a progress message
 			sys.stdout.write("Processing nodes"+" "*20+"\n\r\x1b[A")
 
@@ -255,7 +255,7 @@ class Cluster:
 	def defineVolumes(self):
 		""" Create the volume + brick objects """
 		
-		if self.output_mode == 'console':
+		if self.output_mode == 'console' and not cfg.no_progress_msgs:
 			# print a progress message
 			sys.stdout.write("Building volume objects"+" "*20+"\n\r\x1b[A")
 		
@@ -522,7 +522,7 @@ class Cluster:
 			- vol status all --> self heal states 
 		
 		"""
-		if self.output_mode == 'console':
+		if self.output_mode == 'console' and not cfg.no_progress_msgs:
 			# print a progress message
 			sys.stdout.write("Updating volume information"+" "*20+"\n\r\x1b[A")
 		
@@ -569,7 +569,7 @@ class Cluster:
 				# ---------------------------------------------------------------------			
 				if self.volume[volume_name].self_heal_enabled:
 					
-					if self.output_mode == 'console':
+					if self.output_mode == 'console' and not cfg.no_progress_msgs:
 						sys.stdout.write("Analysing Self Heal daemons on %s %s\n\r\x1b[A"%(volume_name, " "*20))
 						
 					(rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
@@ -719,7 +719,7 @@ class Cluster:
 			clientCount method to determine unique clients connected to 
 			the clusters volume(s) """
 			
-		if self.output_mode == 'console':
+		if self.output_mode == 'console' and not cfg.no_progress_msgs:
 			# print a progress message
 			sys.stdout.write("Processing gluster client connections"+" "*20+"\n\r\x1b[A")
 		
@@ -730,7 +730,7 @@ class Cluster:
 		
 		if gluster_rc > 0 :
 			# unable to get the client connectivity information
-			if self.output_mode == 'console':
+			if self.output_mode == 'console' and not cfg.no_progress_msgs:
 				print "\ngstatus has been unable to get the output of a 'vol status all clients --xml' command"
 				print "and can not continue.\n"
 			return
@@ -1038,7 +1038,7 @@ class Volume:
 				
 
 		
-		if output_mode == 'console':
+		if self.output_mode == 'console' and not cfg.no_progress_msgs:
 			sys.stdout.write("Analysing Self Heal backlog for %s %s \n\r\x1b[A"%(self.name," "*20))
 		
 		# On gluster 3.4 & 3.5 vol heal with --xml is not supported so parsing
