@@ -88,6 +88,9 @@ def consoleMode():
 			if len(volume_list) == 0 or vol_name in volume_list:
 				vol = cluster.volume[vol_name]
 				(up,all) = vol.brickStates()
+				
+				task_list_str = ", ".join(vol.task_list) if vol.task_list else 'None'
+				
 				print ("\t%s %s - %d/%d bricks up - %s"
 					%(vol_name.ljust(16,' '), 
 					vol.volume_state.upper(),
@@ -102,6 +105,7 @@ def consoleMode():
 					print "\t" + " "*17 + "Snapshots: %d"%(vol.snapshot_count)
 					
 				print ("\t" + " "*17 + "Self Heal: %s"%(vol.self_heal_string))
+				print ("\t" + " "*17 + "Tasks Active: %s"%(task_list_str))
 				print ("\t" + " "*17 + "Protocols: glusterfs:%s  NFS:%s  SMB:%s"
 					%(vol.protocol['NATIVE'],vol.protocol['NFS'], vol.protocol['SMB']))
 				print ("\t" + " "*17 + "Gluster Clients : %d"%(vol.client_count))

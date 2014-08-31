@@ -562,25 +562,37 @@ class Cluster:
 					print "has entered a disconnected state."
 					print "\nResponse: Rerun gstatus or issue a peer status command to confirm\n"
 					exit(16)
-				
+
+				# -----------------------------------------------------------------------------
+				# Issue a vol status then use the output to look for active tasks and self heal
+				# state information
+				# -----------------------------------------------------------------------------
+				(rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
+				gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
+							for line in vol_status if 'opRet' in line][0])				
+				xml_string = ''.join(vol_status)
+				xml_root = ETree.fromstring(xml_string)							
+							
+				task_elements = xml_root.findall('.//task')
+
+				for task in task_elements:
+					task_name = task.find('./type').text
+					task_status = task.find('./status').text
+					task.status_str = task.find('./statusStr').text
+					if task_status == '1':
+						self.volume[volume_name].task_list.append(task_name)
+
+						
 				# ---------------------------------------------------------------------
-				# The volume is in a started state, so look for self-heal
-				# information - if this volume actually has self heal enabled!
+				# If the volume has self_heal enabled, we look at the state of the daemons
 				# ---------------------------------------------------------------------			
 				if self.volume[volume_name].self_heal_enabled:
 					
 					if self.output_mode == 'console' and not cfg.no_progress_msgs:
 						sys.stdout.write("Analysing Self Heal daemons on %s %s\n\r\x1b[A"%(volume_name, " "*20))
-						
-					(rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
-					gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
-								for line in vol_status if 'opRet' in line][0])
 				
 					if gluster_rc == 0:
-			
-						xml_string = ''.join(vol_status)
-						xml_root = ETree.fromstring(xml_string)
-					
+		
 						self_heal_list = []
 					
 						node_elements = xml_root.findall('.//node')
@@ -861,7 +873,7 @@ class Volume:
 		self.snapshot_count = 0
 		self.snapshot_list =[]			# list of snapshot objects
 		self.max_snapshots = 256
-
+		self.task_list = []				# list of active tasks running against this volume
 		
 		Volume.num_volumes += 1
 
