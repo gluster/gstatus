@@ -121,6 +121,8 @@ class Cluster:
 		
 		self.getVersion()
 		
+		self.ip_list = []			# list of IP's from all nodes
+		
 	
 	def initialise(self):
 		""" call the node, volume 'generator' to create the child objects 
@@ -205,10 +207,11 @@ class Cluster:
 			this_hostname = node_info['hostname']
 			
 			alias_list = hostAliasList(this_hostname)
-			
 			new_node = Node(node_info['uuid'], node_info['connected'],
 							alias_list)	
 			
+			self.ip_list += [ ip for ip in alias_list if isIP(ip) ]
+
 						
 			# add this node object to the cluster objects 'dict'
 			self.node[node_info['uuid']] = new_node
@@ -240,6 +243,8 @@ class Cluster:
 			new_node = Node(local_uuid, local_connected,
 							alias_list)
 							
+			self.ip_list += [ ip for ip in alias_list if isIP(ip) ]
+										
 			self.node[local_uuid] = new_node
 			self.localUUID = local_uuid	
 			
@@ -655,7 +660,7 @@ class Cluster:
 				self.volume_summary['down'] += 1
 		
 		
-		self.activeNodes()		# update active node couter
+		self.activeNodes()		# update active node counter
 		self.activeBricks()		# update active brick counter
 		self.checkSelfHeal()
 
@@ -759,7 +764,7 @@ class Cluster:
 			vol_name = volume_xml.find('./volName').text
 			
 			# process the volume xml
-			self.volume[vol_name].clientCount(volume_xml)
+			self.volume[vol_name].clientCount(volume_xml, self.ip_list)
 
 			# add the volumes unique set of clients to the clusters set
 			self.client_set.update(self.volume[vol_name].client_set)
@@ -1202,7 +1207,7 @@ class Volume:
 				repl_set += 1
 		print
 
-	def clientCount(self,vol_stat_clients_xml):
+	def clientCount(self,vol_stat_clients_xml, peer_ip_list):
 		""" receive volume xml, and parse to determine the total # of
 			unique clients connected to the volume """
 		
@@ -1222,7 +1227,8 @@ class Volume:
 			clients = brick.findall('.//hostname')
 			for client in clients:
 				client_name = client.text.split(':')[0]
-				self.client_set.add(client_name)
+				if client_name not in peer_ip_list:
+					self.client_set.add(client_name)
 		
 		self.client_count = len(self.client_set)
 			
