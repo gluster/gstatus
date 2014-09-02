@@ -1055,7 +1055,7 @@ class Volume:
 				
 
 		
-		if self.output_mode == 'console' and not cfg.no_progress_msgs:
+		if output_mode == 'console' and not cfg.no_progress_msgs:
 			sys.stdout.write("Analysing Self Heal backlog for %s %s \n\r\x1b[A"%(self.name," "*20))
 		
 		# On gluster 3.4 & 3.5 vol heal with --xml is not supported so parsing
