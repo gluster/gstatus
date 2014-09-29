@@ -133,12 +133,14 @@ def hostAliasList(host):
 	return sorted(alias_list)
 
 def getIPv4Addresses():
-	""" return a list of ipv4 addresses on this host from ethX and bondX
+	""" return a list of ipv4 addresses on this host from a specific list of 
+		suitable interfaces (ethX, ibX etc)
 		AF_INET = ipv4, AF_INET6 = ipv6
 	"""
 	ip_list =[]
+	good_interface = ('eth','br','bond','ib')
 	
-	interface_list = [ iface for iface in netifaces.interfaces() if iface[0:3] in ['eth','bon']]
+	interface_list = [ iface for iface in netifaces.interfaces() if iface.startswith((good_interface))]
 	
 	for interface in interface_list:
 		link = netifaces.ifaddresses(interface)
