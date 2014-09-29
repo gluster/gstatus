@@ -1,5 +1,5 @@
 Name:		gstatus
-Version:	0.61
+Version:	0.62
 Release:	0%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
@@ -66,6 +66,23 @@ rm -rf %{buildroot}
 
 
 %changelog
+
+* Tue Sep 30 2014 Paul Cuzner <pcuzner@redhat.com> 0.62
+- fix - capacity calculations, and formating
+- fix - self heal status calucation corrected
+- fix - corrected client counts excluding rhs nodes
+- fix - node names can now resolv with /etc/hosts entries
+- added - snapshot counts at cluster and volume level
+- added - active tasks information by volume
+- added - snapshot information to json/keyvalue output modes
+- added - product name added to output
+- added - self heal daemon checks to health checks
+- added - '-w' option to turn off interactive progress messages
+- maintenance - added brX and ibX interfaces to network code for name/IP resolution (Stephan Holljes)
+- maintenance - moved glfsversion to separate module
+- maintenance - added snapshot class to track snapshot attributes
+- maintenance - '-b' now needed to query selfheal state, reducing typical run time
+
 
 * Tue Aug 12 2014 Paul Cuzner <pcuzner@redhat.com> 0.60.1
 - minor fix for cluster capacity calculation
