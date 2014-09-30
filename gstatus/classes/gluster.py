@@ -335,7 +335,7 @@ class Cluster:
 				except KeyError:
 					print "Unable to associate brick with a peer in the cluster, possibly due"
 					print "to name lookup failures. If the nodes are not registered (fwd & rev)"
-					print "to dns, add local entries for you cluster the /etc/hosts file"
+					print "to dns, add local entries for your cluster nodes in the the /etc/hosts file"
 					sys.exit(16)
 				
 				new_brick = Brick(brick_path, self.node[node_uuid], new_volume.name)
