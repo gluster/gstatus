@@ -428,8 +428,10 @@ class Cluster:
 
 		if os.path.exists('/etc/redhat-storage-release'):
 			with open('/etc/redhat-storage-release','r') as RHS_version:
+				# example contents - Red Hat Storage Server 3.0
 				self.product_name = RHS_version.readline().rstrip()
-				self.product_shortname = "RHSS v%s"%(self.product_name.split()[-1])
+				version_num = ' '.join(self.product_name.split()[4:]).lower().replace('update','u')
+				self.product_shortname = "RHSS v%s"%(version_num)
 		else:
 			self.product_name = self.product_shortname = "Community"
 
