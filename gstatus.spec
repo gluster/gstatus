@@ -1,6 +1,6 @@
 Name:		gstatus
 Version:	0.62
-Release:	0%{?dist}
+Release:	1%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
@@ -41,7 +41,7 @@ easy way to assess the impact to a service, based on a disruptive event
 within the trusted pool (cluster).
 
 %prep
-%setup -q -n %{name}-%{name}
+%setup -q -n %{name}
 
 
 %build
@@ -66,6 +66,8 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Thu Nov 13 2014 Paul Cuzner <pcuzner@redhat.com> 0.62-1
+- fix product name format
 
 * Tue Sep 30 2014 Paul Cuzner <pcuzner@redhat.com> 0.62
 - fix - capacity calculations, and formating
@@ -82,7 +84,6 @@ rm -rf %{buildroot}
 - maintenance - moved glfsversion to separate module
 - maintenance - added snapshot class to track snapshot attributes
 - maintenance - '-b' now needed to query selfheal state, reducing typical run time
-
 
 * Tue Aug 12 2014 Paul Cuzner <pcuzner@redhat.com> 0.60.1
 - minor fix for cluster capacity calculation
