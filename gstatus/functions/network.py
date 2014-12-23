@@ -138,7 +138,7 @@ def getIPv4Addresses():
 		AF_INET = ipv4, AF_INET6 = ipv6
 	"""
 	ip_list =[]
-	good_interface = ('eth','br','bond','ib')
+	good_interface = ('eth','br','bond','ib','rhevm')
 	
 	interface_list = [ iface for iface in netifaces.interfaces() if iface.startswith((good_interface))]
 	
