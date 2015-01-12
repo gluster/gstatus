@@ -167,9 +167,12 @@ def main():
 
 if __name__ == '__main__':
 	
+	# initialise any global variables
+	cfg.init()
+	
 	usageInfo = "usage: %prog [options]"
 	
-	parser = OptionParser(usage=usageInfo,version="%prog 0.62")
+	parser = OptionParser(usage=usageInfo,version="%prog 0.63")
 	parser.add_option("-s","--state",dest="state",action="store_true",help="show highlevel health of the cluster")
 	parser.add_option("-v","--volume",dest="volumes", action="store_true",help="volume info (default is ALL, or supply a volume name)")
 	parser.add_option("-b","--backlog",dest="selfheal", action="store_true",default=False,help="Look deeper at self heal state")
@@ -179,11 +182,14 @@ if __name__ == '__main__':
 	parser.add_option("-o","--output-mode",dest="output_mode",default='console',choices=['console','json','keyvalue'],help="produce output in different formats - json, keyvalue or console(default)")
 	parser.add_option("-D","--debug",dest="debug_on",action="store_true",help="turn on debug mode")
 	parser.add_option("-w","--without-progress",dest="progress",action="store_true",default=False,help="turn off progress updates to user during data gathering")
+	parser.add_option("-t","--timeout",dest="timeout",help="gluster command timeout value (secs)")
 	(options, args) = parser.parse_args()
 
-	# initialise any global variables
-	cfg.init()
+	if options.timeout:
+		cfg.CMD_TIMEOUT = int(options.timeout)
+
 	cfg.debug = True if options.debug_on else False
+	
 	cfg.no_progress_msgs = options.progress 
 	
 	state_request = options.state
