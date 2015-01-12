@@ -1,6 +1,6 @@
 Name:		gstatus
-Version:	0.62
-Release:	1%{?dist}
+Version:	0.63
+Release:	0%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
@@ -66,6 +66,12 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Jan 12 2015 Paul Cuzner <pcuzner@redhat.com> 0.63
+- switch defineNodes method from "gluster peer status" to "gluster pool list"
+- added timeout threshold to all gluster commands used
+- added timeout option for the user to tweak (-t)
+- now identifies an active peer for all commands, so local gluster can be down
+
 * Thu Nov 13 2014 Paul Cuzner <pcuzner@redhat.com> 0.62-1
 - fix product name format
 
