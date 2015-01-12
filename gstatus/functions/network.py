@@ -82,12 +82,10 @@ def isIP(host_string):
 def hostAliasList(host):
 	""" for any given host attempt to return an alias list of names/IP """
 	
-	alias_list = []
+	alias_list = [host]
 	fqdn = ''
 	shortname = ''
 	ip_addr = ''
-	
-	alias_list.append(host)						
 	
 	if isIP(host):
 	
