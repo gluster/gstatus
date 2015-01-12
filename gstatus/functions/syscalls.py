@@ -17,6 +17,8 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# deprecated at version 0.63 - replaced by gstatus_cli module
+
 import gstatus.functions.config as cfg
 import subprocess
 import shlex
