@@ -25,10 +25,9 @@ import 	xml.etree.ElementTree 	as 	ETree
 import 	json
 from 	decimal import *
 
-
-from 	gstatus.functions.syscalls	import 	issueCMD
 from 	gstatus.functions.network	import	portOpen, isIP, IPtoHost, hostToIP,hostAliasList,getIPv4Addresses
 from 	gstatus.functions.utils		import 	displayBytes, getAttr, versionOK
+from 	gstatus.classes.gstatus_cli	import	GlusterCommand, set_active_peer
 
 import 	gstatus.functions.config 	as cfg
 
@@ -91,8 +90,6 @@ class Cluster:
 		self.node={}			# dict of node objects indexed uuid
 		
 		self.nodes_down = 0
-								
-		self.localUUID = ''
 		
 		self.volume={}
 		self.brick={}
@@ -131,6 +128,8 @@ class Cluster:
 	
 		self.has_volumes = True if glob.glob('/var/lib/glusterd/vols/*/trusted-*-fuse.vol') else False
 	
+		set_active_peer()				# setup GlusterCommand class to have a valid node for commands
+	
 		# if has_volumes is populated we have vol files, then it's ok to 
 		# run the queries to define the node and volume objects
 		if self.has_volumes:
@@ -155,8 +154,10 @@ class Cluster:
 			# no volumes in this cluster, print a message and abort
 			print "This cluster doesn't have any volumes/daemons running."
 			print "The output below shows the current nodes attached to this host.\n"
-			(rc, peers) = issueCMD('gluster pool list')
-			for line in peers:
+			
+			cmd = GlusterCommand('gluster pool list')
+			cmd.run()
+			for line in cmd.stdout:
 				print line
 			print
 			exit(12)
@@ -176,37 +177,52 @@ class Cluster:
 		return node_uuid
 
 
+	
 	def defineNodes(self):
-		""" 
-		define the nodes present in the trusted pool by using peer status
-		against this host 
-		"""
+		
+		""" define the node objects for this cluster based on gluster pool list output """
 		
 		if self.output_mode == 'console' and not cfg.no_progress_msgs:
 			# display a progress message
 			sys.stdout.write("Processing nodes"+" "*20+"\n\r\x1b[A")
-
-		(rc, peer_list) = issueCMD('gluster peer status --xml')
-
-		if rc > 0:
-			print "gluster did not respond to a peer status request, gstatus"
-			print "can not continue.\n"
-			exit(12)
 		
+		cmd = GlusterCommand('gluster pool list --xml')
+		cmd.run()
+
+		if cmd.rc != 0:
+			print "glusterd did not respond to a peer status request, gstatus"
+			print "can not continue.\n"
+			exit(12)		
+	
 		# define a list of elements in the xml that we're interested in 
 		field_list = ['hostname','uuid','connected']
 			
-		xml_string = ''.join(peer_list)
+		xml_string = ''.join(cmd.stdout)
 		xml_root = ETree.fromstring(xml_string)
 
-		peer_list = xml_root.findall('.//peer')
+		peer_list = xml_root.findall('.//peer')	
 		
-		# len(peer_list) + 1 = size of trusted pool (cluster)		
 		for peer in peer_list:
 			node_info = getAttr(peer,field_list)
 			this_hostname = node_info['hostname']
+			alias_list = []
 			
-			alias_list = hostAliasList(this_hostname)
+			if this_hostname == 'localhost':
+				# output may say localhost, but it could be a reponse from a 
+				# foreign peer, since the local glusterd could be down
+				if GlusterCommand.targetNode == 'localhost':
+					local_ip_list = getIPv4Addresses()			# Grab all IP's
+					for ip in local_ip_list:
+						alias_list += hostAliasList(ip)	
+					alias_list.append('localhost')
+				else:
+					this_hostname = GlusterCommand.targetNode					
+					alias_list = hostAliasList(this_hostname)
+					alias_list.append('localhost')
+			else:
+				alias_list = hostAliasList(this_hostname)
+			
+			
 			new_node = Node(node_info['uuid'], node_info['connected'],
 							alias_list)	
 			
@@ -214,49 +230,10 @@ class Cluster:
 
 						
 			# add this node object to the cluster objects 'dict'
-			self.node[node_info['uuid']] = new_node
+			self.node[node_info['uuid']] = new_node	
 			
-		# now we take care of the running host
-		with open('/var/lib/glusterd/glusterd.info') as glusterd:
-			for opt in glusterd:
-				if opt.startswith('UUID'):
-					local_uuid = opt.strip().split('=')[1]
-					break
-					 
-		local_connected = '1' if portOpen('localhost',24007) else '0'
-		local_hostname = ''
-		alias_list = []		
-		
-		if cfg.debug:
-			print "defineNodes using local IP's to determine alias names for the localhost"
-			
-		local_ip_list = getIPv4Addresses()			# Grab all IP's
-		for ip in local_ip_list:
-			alias_list += hostAliasList(ip)			
-			
-				
-		
-		if alias_list:
-			
-			alias_list.append('localhost')
-			
-			new_node = Node(local_uuid, local_connected,
-							alias_list)
-							
-			self.ip_list += [ ip for ip in alias_list if isIP(ip) ]
-										
-			self.node[local_uuid] = new_node
-			self.localUUID = local_uuid	
-			
-			self.node_count = Node.nodeCount()
-			
-		else:
-			# can't get a local hostname? twilight zone moment
-			print "unable to identify the local node. gstatus aborting"
-			pass	
-			exit(12)
-
-
+		self.node_count = Node.nodeCount()	
+	
 	def defineVolumes(self):
 		""" Create the volume + brick objects """
 		
@@ -264,9 +241,11 @@ class Cluster:
 			# print a progress message
 			sys.stdout.write("Building volume objects"+" "*20+"\n\r\x1b[A")
 		
-		(rc, vol_info) = issueCMD("gluster vol info --xml")
+		cmd = GlusterCommand("gluster vol info --xml")
+		cmd.run()
+		#(rc, vol_info) = issueCMD("gluster vol info --xml")
 		
-		xml_string = ''.join(vol_info)
+		xml_string = ''.join(cmd.stdout)
 		xml_root = ETree.fromstring(xml_string)
 		
 		vol_elements= xml_root.findall('.//volume')
@@ -333,7 +312,7 @@ class Cluster:
 					new_volume.node[node_uuid] = self.node[node_uuid]
 					
 				except KeyError:
-					print "Unable to associate brick with a peer in the cluster, possibly due"
+					print "Unable to associate brick %s with a peer in the cluster, possibly due"%(brick_path)
 					print "to name lookup failures. If the nodes are not registered (fwd & rev)"
 					print "to dns, add local entries for your cluster nodes in the the /etc/hosts file"
 					sys.exit(16)
@@ -403,12 +382,14 @@ class Cluster:
 			
 			this_volume = self.volume[volume_name]
 			
-			(rc, snap_info) = issueCMD("gluster snap list %s"%(volume_name))
+			cmd = GlusterCommand("gluster snap list %s"%(volume_name))
+			cmd.run()
+			#(rc, snap_info) = issueCMD("gluster snap list %s"%(volume_name))
 			
-			if rc == 0:
+			if cmd.rc == 0:
 				# process the snap information
-				if not snap_info[0].lower().startswith('no snapshots'):
-					for snap in snap_info:
+				if not cmd.stdout[0].lower().startswith('no snapshots'):
+					for snap in cmd.stdout:
 						snap_name = snap.strip()
 						new_snapshot = Snapshot(snap_name, this_volume, volume_name)
 						this_volume.snapshot_list.append(new_snapshot)
@@ -422,9 +403,11 @@ class Cluster:
 
 	def getVersion(self):
 		""" Sets the current version and product identifier for this cluster """
-		(rc, versInfo) = issueCMD("gluster --version")
+		cmd = GlusterCommand("gluster --version")
+		#(rc, versInfo) = issueCMD("gluster --version")
+		cmd.run()
 		
-		self.glfs_version = versInfo[0].split()[1]
+		self.glfs_version = cmd.stdout[0].split()[1]
 
 		if os.path.exists('/etc/redhat-storage-release'):
 			with open('/etc/redhat-storage-release','r') as RHS_version:
@@ -546,15 +529,17 @@ class Cluster:
 			# in the started state, when issuing the vol status	command
 			if self.volume[volume_name].status == 1:
 				
-				(rc, vol_status) = issueCMD("gluster vol status %s detail --xml"%(volume_name))
-			
+				cmd = GlusterCommand("gluster vol status %s detail --xml"%(volume_name))
+				#(rc, vol_status) = issueCMD("gluster vol status %s detail --xml"%(volume_name))
+				cmd.run()
+				
 				# Need to check opRet element since for xml based gluster commands
 				# do NOT pass a return code back to the shell!
-				gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
-								for line in vol_status if 'opRet' in line][0])
+				#gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
+				#				for line in vol_status if 'opRet' in line][0])
 			
-				if gluster_rc == 0:
-					xml_string = ''.join(vol_status)
+				if cmd.rc == 0:
+					xml_string = ''.join(cmd.stdout)
 					xml_obj = ETree.fromstring(xml_string)
 
 					# Update the volume, to provide capacity and status information
@@ -574,10 +559,12 @@ class Cluster:
 				# Issue a vol status then use the output to look for active tasks and self heal
 				# state information
 				# -----------------------------------------------------------------------------
-				(rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
-				gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
-							for line in vol_status if 'opRet' in line][0])				
-				xml_string = ''.join(vol_status)
+				cmd=GlusterCommand("gluster vol status %s --xml"%(volume_name))
+				cmd.run()
+				#(rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
+				#gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
+				#			for line in vol_status if 'opRet' in line][0])				
+				xml_string = ''.join(cmd.stdout)
 				xml_root = ETree.fromstring(xml_string)							
 							
 				task_elements = xml_root.findall('.//task')
@@ -598,7 +585,7 @@ class Cluster:
 					if self.output_mode == 'console' and not cfg.no_progress_msgs:
 						sys.stdout.write("Analysing Self Heal daemons on %s %s\n\r\x1b[A"%(volume_name, " "*20))
 				
-					if gluster_rc == 0:
+					if cmd.rc == 0:
 		
 						self_heal_list = []
 					
@@ -609,7 +596,7 @@ class Cluster:
 						for node in node_elements:
 						
 							# WORKAROUND
-							# there's a big in 3.4, where when a node is missing 
+							# there's a bug in some versions of 3.4, where when a node is missing 
 							# the xml returned is malformed returning a node 
 							# within a node so we need to check the subelements 
 							# to see if they're valid. 
@@ -624,13 +611,13 @@ class Cluster:
 								
 								# convert the name to a usable uuid
 								if node_name == 'localhost':
-									uuid = self.localUUID
+									uuid = self.getNode(GlusterCommand.targetNode)
 								else:
 									uuid = self.getNode(node_name)
 								
 								if not uuid:
 									# tried to resolve the name but couldn't
-									print "gstatus has been given an 'path' for a self heal daemon that"
+									print "Cluster.updateState : Attempting to use a 'path' (%s) for a self heal daemon that"%(node_name)
 									print "does not correspond to a peer node, and can not continue\n"
 									exit(16)
 								
@@ -742,12 +729,15 @@ class Cluster:
 			# print a progress message
 			sys.stdout.write("Processing gluster client connections"+" "*20+"\n\r\x1b[A")
 		
-		(rc, vol_clients) = issueCMD("gluster vol status all clients --xml")
-
-		gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
-						for line in vol_clients if 'opRet' in line][0]) if rc == 0 else rc
+		cmd = GlusterCommand("gluster vol status all clients --xml")
+		cmd.run()
 		
-		if gluster_rc > 0 :
+		#(rc, vol_clients) = issueCMD("gluster vol status all clients --xml")
+
+		#gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1] 
+		#				for line in vol_clients if 'opRet' in line][0]) if rc == 0 else rc
+		
+		if cmd.rc > 0 :
 			# unable to get the client connectivity information
 			if self.output_mode == 'console' and not cfg.no_progress_msgs:
 				print "\ngstatus has been unable to get the output of a 'vol status all clients --xml' command"
@@ -756,7 +746,7 @@ class Cluster:
 			
 		
 		# At this point the command worked, so we can process the results
-		xml_string = ''.join(vol_clients)
+		xml_string = ''.join(cmd.stdout)
 		xml_root = ETree.fromstring(xml_string)
 		
 		volumes = xml_root.findall('.//volume')
@@ -922,7 +912,7 @@ class Volume:
 		"""
 		
 		if cfg.debug:
-			print "update. Attempting to update volume %s"%(self.name)
+			print "Volume 'update'. Processing volume %s"%(self.name)
 
 		node_elements = volume_xml.findall('.//node')
 		# print "DEBUG --> this volume xml has %d node elements"%(len(node_elements))
@@ -1062,16 +1052,20 @@ class Volume:
 		
 		# On gluster 3.4 & 3.5 vol heal with --xml is not supported so parsing
 		# has to be done the old fashioned way :(
-		(rc, vol_heal_output) = issueCMD("gluster vol heal %s info"%(self.name))
+		
+		# The command is invoked with a timeout clause too
+		cmd = GlusterCommand("gluster vol heal %s info"%(self.name), timeout=cfg.CMD_TIMEOUT)
+		cmd.run()
+		#(rc, vol_heal_output) = issueCMD("gluster vol heal %s info"%(self.name))
 
-		if rc == 0:
+		if cmd.rc == 0:
 			
 			total_heal_count = 0
 			
 			# in gluster 3.4 even though the cluster and bricks are defined with IP addresses
 			# the vol heal can return an fqdn for the hostname - so we have to account for that
 			
-			for line in vol_heal_output:
+			for line in cmd.stdout:
 
 				if line.lower().startswith('brick'):
 					(node,path_name) = line.replace(':',' ').split()[1:]
@@ -1139,6 +1133,8 @@ class Volume:
 			
 		else:
 			# vol heal command failed - just flag the problem
+			if cfg.debug:
+				print "Volume updateSelfHeal. Query for self heal details timed out - maybe run again with a larger -t value?"
 			self.self_heal_string += " BACKLOG DATA UNAVAILABLE"
 
 			
