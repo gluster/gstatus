@@ -22,117 +22,119 @@
 #  
 #  
 
-import 	gstatus.functions.config as cfg
+import  socket
+import  fcntl
+import  struct
+import  array
 
-import 	socket
-
+import  gstatus.functions.config as cfg
 
 def portOpen(hostname, port, scan_timeout=0.05):
-	""" return boolean denoting whether a given port on a host is open or not """
-	
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.settimeout(scan_timeout)
+    """ return boolean denoting whether a given port on a host is open or not """
+    
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(scan_timeout)
 
-	state = True if s.connect_ex((hostname,port)) == 0 else False
-	
-	return state
-	
+    state = True if s.connect_ex((hostname,port)) == 0 else False
+    
+    return state
+    
 def IPtoHost(addr):
-	""" convert an IP address to a host name, returning shortname and fqdn to the 
-		caller
-	"""
-	
-	
-	try:
-		fqdn = socket.gethostbyaddr(addr)[0]
-		shortName = fqdn.split('.')[0]
-		if fqdn == shortName:
-			fqdn = ""
-		
-	except:
-		# can't resolve it, so default to the address given
-		shortName = addr
-		fqdn = ""
-	
-	return (shortName, fqdn)
-	
+    """ convert an IP address to a host name, returning shortname and fqdn to the 
+        caller
+    """
+    
+    
+    try:
+        fqdn = socket.gethostbyaddr(addr)[0]
+        shortName = fqdn.split('.')[0]
+        if fqdn == shortName:
+            fqdn = ""
+        
+    except:
+        # can't resolve it, so default to the address given
+        shortName = addr
+        fqdn = ""
+    
+    return (shortName, fqdn)
+    
 
 def hostToIP(hostname):
-	""" provide a IP address for a given fqdn """
-	
-	try:
-		return socket.gethostbyname(hostname)
-	except:
-		return hostname
+    """ provide a IP address for a given fqdn """
+    
+    try:
+        return socket.gethostbyname(hostname)
+    except:
+        return hostname
 
-	
+    
 def isIP(host_string):
-	""" Quick method to determine whether a string is an IP address or not """
-	
-	try:
-		x = socket.inet_aton(host_string)
-		response = True
-	except:
-		response = False
-	
-	return response
-	
+    """ Quick method to determine whether a string is an IP address or not """
+    
+    try:
+        x = socket.inet_aton(host_string)
+        response = True
+    except:
+        response = False
+    
+    return response
+    
 
 def hostAliasList(host):
-	""" for any given host attempt to return an alias list of names/IP """
-	
-	alias_list = [host]
-	fqdn = ''
-	shortname = ''
-	ip_addr = ''
-	
-	if isIP(host):
-	
-		try:
-			fqdn = socket.gethostbyaddr(host)[0]
+    """ for any given host attempt to return an alias list of names/IP """
+    
+    alias_list = [host]
+    fqdn = ''
+    shortname = ''
+    ip_addr = ''
+    
+    if isIP(host):
+    
+        try:
+            fqdn = socket.gethostbyaddr(host)[0]
 
-		except:		
-			# could get "socket.herror: [Errno 1] Unknown host"
-			# indicating that reverse DNS is not working for this IP
-			
-			# If this is an IP on the local machine, use gethostname()
-			if host in getIPv4Addresses():
-				fqdn=socket.gethostname()	
-			else:
-				# however, if the IP is foreign and not resolving check
-				# /etc/hosts for an answer
-				with open('/etc/hosts') as hosts_file:
-					ip_match = [host_entry for host_entry in hosts_file.readlines() if host in host_entry]
-				if ip_match:
-					fqdn = ip_match[0].split()[1]
+        except:     
+            # could get "socket.herror: [Errno 1] Unknown host"
+            # indicating that reverse DNS is not working for this IP
+            
+            # If this is an IP on the local machine, use gethostname()
+            if host in getIPv4Addresses():
+                fqdn=socket.gethostname()   
+            else:
+                # however, if the IP is foreign and not resolving check
+                # /etc/hosts for an answer
+                with open('/etc/hosts') as hosts_file:
+                    ip_match = [host_entry for host_entry in hosts_file.readlines() if host in host_entry]
+                if ip_match:
+                    fqdn = ip_match[0].split()[1]
 
-				
-		
-		shortname = fqdn.split('.')[0]
-		alias_list.append(fqdn)
-		alias_list.append(shortname)
-		
-	else:
-		try:
-			if '.' in host:
-				shortname = host.split('.')[0]
-				alias_list.append(shortname)
-			else:
-				fqdn = socket.gethostbyname_ex(host)[0]
-				alias_list.append(fqdn)
-			
-			ip_addr = socket.gethostbyname(host)
-		except:
-			pass
+                
+        
+        shortname = fqdn.split('.')[0]
+        alias_list.append(fqdn)
+        alias_list.append(shortname)
+        
+    else:
+        try:
+            if '.' in host:
+                shortname = host.split('.')[0]
+                alias_list.append(shortname)
+            else:
+                fqdn = socket.gethostbyname_ex(host)[0]
+                alias_list.append(fqdn)
+            
+            ip_addr = socket.gethostbyname(host)
+        except:
+            pass
 
-		alias_list.append(ip_addr)
-						
-	return sorted(alias_list)
+        alias_list.append(ip_addr)
+                        
+    return sorted(alias_list)
 
 def getIPv4Addresses():
-	""" return a list of ipv4 addresses on this host ignoring specific interfaces
+    """ return a list of ipv4 addresses on this host ignoring specific interfaces
         that gluster wouldn't be using - tun/tap, virbrX etc
-	"""
+    """
     
     STRUCT_SIZE = 40    # 64bit environment - each name/IP pair is 40 bytes
     SIOCGIFCONF = 35090 # addr from http://pydoc.org/1.6/SOCKET.html
@@ -158,5 +160,5 @@ def getIPv4Addresses():
     
  
 if __name__ == '__main__':
-	pass
+    pass
 
