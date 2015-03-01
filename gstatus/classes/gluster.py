@@ -303,7 +303,8 @@ class Cluster:
 				(hostname,pathname) = brick_path.split(':')
 				
 				if cfg.debug:
-					print "defineVolumes. Adding brick %s"%(brick_path)
+					print "defineVolumes. Adding brick %s to %s"%(brick_path,
+                          new_volume.name)
 				
 				node_uuid = self.getNode(hostname)
 				
