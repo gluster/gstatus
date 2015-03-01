@@ -1,6 +1,6 @@
 Name:		gstatus
 Version:	0.63
-Release:	0%{?dist}
+Release:	2%{?dist}
 Summary:	Show the current health of the elements in a Gluster Trusted Pool
 
 Group:		Applications/System
@@ -17,7 +17,6 @@ BuildRequires:	python2-devel
 BuildRequires:	python-setuptools
 
 Requires:	/usr/sbin/gluster
-Requires:	python-netifaces
 Requires:	glusterfs >= 3.4
 
 %if 0%{?rhel} && 0%{?rhel} <= 6
@@ -66,6 +65,8 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Mon Mar 02 2015 Paul Cuzner <pcuzner@redhat.com> 0.63-2
+- minor update removing the dependency on python-netifaces module
 * Mon Jan 12 2015 Paul Cuzner <pcuzner@redhat.com> 0.63
 - switch defineNodes method from "gluster peer status" to "gluster pool list"
 - added timeout threshold to all gluster commands used
