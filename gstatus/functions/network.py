@@ -25,7 +25,6 @@
 import 	gstatus.functions.config as cfg
 
 import 	socket
-import 	netifaces
 
 
 def portOpen(hostname, port, scan_timeout=0.05):
@@ -131,27 +130,33 @@ def hostAliasList(host):
 	return sorted(alias_list)
 
 def getIPv4Addresses():
-	""" return a list of ipv4 addresses on this host from a specific list of 
-		suitable interfaces (ethX, ibX etc)
-		AF_INET = ipv4, AF_INET6 = ipv6
+	""" return a list of ipv4 addresses on this host ignoring specific interfaces
+        that gluster wouldn't be using - tun/tap, virbrX etc
 	"""
-	ip_list =[]
-	good_interface = ('eth','br','bond','ib','rhevm','ovirtmgmt')
-	
-	interface_list = [ iface for iface in netifaces.interfaces() if iface.startswith((good_interface))]
-	
-	for interface in interface_list:
-		link = netifaces.ifaddresses(interface)
-		if netifaces.AF_INET in link:
-			ipv4List = link[netifaces.AF_INET]
-			for ip in ipv4List:
-				ip_list.append(ip['addr'])
-	
-	return ip_list
-	
-	
+    
+    STRUCT_SIZE = 40    # 64bit environment - each name/IP pair is 40 bytes
+    SIOCGIFCONF = 35090 # addr from http://pydoc.org/1.6/SOCKET.html
+    BYTES = 4096        # buffer size to use
+    IGNORED_IFACES = ('lo','virbr','tun','tap')
+    
+    sck = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        
+    names = array.array('B', '\0' * BYTES)
+    outbytes = struct.unpack('iL', fcntl.ioctl(
+               sck.fileno(),
+               SIOCGIFCONF,  
+               struct.pack('iL', BYTES, names.buffer_info()[0])))[0]
 
+    namestr = names.tostring()
 
+    if_list = [(namestr[i:i+16].split('\0', 1)[0],
+                socket.inet_ntoa(namestr[i+20:i+24])) 
+               for i in range(0, outbytes, STRUCT_SIZE)]    
+
+    return [ifaddr for ifname,ifaddr in if_list 
+            if not ifname.startswith(IGNORED_IFACES) ]
+    
+ 
 if __name__ == '__main__':
 	pass
 
