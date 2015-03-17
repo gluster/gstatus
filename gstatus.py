@@ -113,7 +113,7 @@ def consoleMode():
                       vol.protocol['NFS'], 
                       vol.protocol['SMB']))
                 print ("\t" + " "*17 + 
-                    "Gluster Connectivty: %d hosts %d tcp connections"
+                    "Gluster Connectivty: %d hosts, %d tcp connections"
                     %(vol.client_count, 
                       vol.connection_count))
                     
