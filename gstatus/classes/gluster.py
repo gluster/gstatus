@@ -336,7 +336,7 @@ class Cluster:
                         ctr = 1
 
                         # add this replica set to the volume's info
-                        new_volume.replica_set.append(repl)
+                        new_volume.subvolumes.append(repl)
                         # drop all elements from temporary list
                         repl =[]
 
@@ -823,11 +823,11 @@ class Volume:
     volume_states = ['unknown','up', 'down','up(partial)', 'up(degraded)']
     
     # declare the attributes that we're interested in from the vol info output
-    volume_attr = ['name', 'status', 'statusStr', 'type', 'typeStr', 'replicaCount']
+    volume_attr = ['name', 'status', 'statusStr', 'type', 'typeStr', 'replicaCount','disperseCount','redundancyCount']
 
     # status - 0=created, 1=started, 2 = stopped
     #
-    # type - 5 = dist-repl
+    # type - 4 = disperse, 5 = dist-repl
 
     def __init__(self,attr_dict):
         """ caller provides a dict, with the keys in the volume_attr list
@@ -843,8 +843,8 @@ class Volume:
         self.brick = {}             # pointers to the brick objects that make up this vol
         self.brick_order = []       # list of the bricks in the order they appear
         self.brick_total = 0
-        self.replica_set=[]         # list, where each item is a tuple, of brick objects
-        self.replica_set_state=[]   # list show number of bricks offline in each repl set
+        self.subvolumes=[]         # list, where each item is a tuple, of brick objects
+        self.subvolume_state=[]   # list show number of bricks offline in each repl set
         self.status_string = ''
 
         self.volume_summary = dict()    # high level description of the volume, used in 
@@ -875,7 +875,7 @@ class Volume:
         self.snapshot_list =[]          # list of snapshot objects
         self.max_snapshots = 256
         self.task_list = []             # list of active tasks running against this volume
-        
+
         Volume.num_volumes += 1
 
     @classmethod
@@ -946,17 +946,26 @@ class Volume:
         
         # if all the bricks are online the usable is simple
         if up_bricks == total_bricks:
-            
-            self.usable_capacity = self.raw_capacity / self.replicaCount
-            self.used_capacity = self.raw_used / self.replicaCount
+
+            if self.disperseCount == 0:
+                # this is a dist or repl volume type
+                self.usable_capacity = self.raw_capacity / self.replicaCount
+                self.used_capacity = self.raw_used / self.replicaCount
+                
+            else:
+                # this is a disperse volume, with all bricks online
+                # assumption : all bricks are the same size
+                disperse_yield = float(self.disperseCount - self.redundancyCount)/self.disperseCount
+                self.usable_capacity = self.raw_capacity * disperse_yield
+                self.used_capacity = self.raw_used * disperse_yield
 
         else:
             
             # have to account for the available space in each replica set
             # for the calculation
             if self.replicaCount > 1:
-                for set in self.replica_set:
-                    for brick_path in set:
+                for subvolume in self.subvolumes:
+                    for brick_path in subvolume:
                         if self.brick[brick_path].up:
                             self.usable_capacity += self.brick[brick_path].size
                             self.used_capacity += self.brick[brick_path].used
@@ -986,15 +995,15 @@ class Volume:
                 # bricks in each replica set
     
                 set_state = []
-                for this_set in self.replica_set:
+                for subvolume in self.subvolumes:
                     state = 0       # initial state is 0 = all good, n > 0 = n bricks down
     
-                    for brick_path in this_set:
+                    for brick_path in subvolume:
                         if not self.brick[brick_path].up:
                             state += 1
                     set_state.append(state)
     
-                self.replica_set_state = set_state  
+                self.subvolume_state = set_state
     
                 worst_set = max(set_state)
                 
