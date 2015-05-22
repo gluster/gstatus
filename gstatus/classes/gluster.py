@@ -1186,7 +1186,14 @@ class Volume:
         """ print function used to show the relationships of the bricks in
             a volume """
 
-        supported_volume_types = ['Replicate', 'Distribute', 'Distributed-Replicate']
+        vol_description = {'Replicate': ['Replica Set', 'afr'],
+                           'Disperse' : ['Disperse set', 'ida']
+                           }
+        vol_description['Distributed-Replicate'] = vol_description['Replicate']
+        vol_description['Distributed-Disperse'] = vol_description['Disperse']
+
+
+        supported_volume_types = ['Replicate', 'Distribute', 'Distributed-Replicate', 'Disperse']
 
         if self.typeStr not in supported_volume_types:
             print "\tDisplay of this volume type has yet to be implemented"
@@ -1199,12 +1206,15 @@ class Volume:
         if self.typeStr.startswith('Dist'):
             print " "*offset + "Distribute (dht)"
             offset=25
+        elif self.typeStr.startswith('Disp'):
+            print " "*offset + "Disperse (ida)"
+            offset = 25
         else:
             print " "*offset + "Replicated (afr)"
             offset = 25
 
 
-        if self.replicaCount == 1:
+        if (self.replicaCount == 1) and (self.disperseCount == 0) :
 
             # Distributed layout
             for brick_name in self.brick_order:
@@ -1213,22 +1223,24 @@ class Volume:
 
         else:
 
-            # Replicated volume
-            repl_set = 0
-            num_repl_sets = len(self.subvolumes)
+            # Replicated or dispersed volume
+            subvol_id = 0
+            subvol_type_text = vol_description[self.typeStr][0]
+            subvol_xlator = vol_description[self.typeStr][1]
+            num_subvols = len(self.subvolumes)
             link_char = "|"
             for subvol in self.subvolumes:
 
-                if repl_set == (num_repl_sets -1):
+                if subvol_id == (num_subvols -1):
                     link_char = " "
 
-                print (" "*offset + "|\n" + " "*offset + "+-- Repl Set "
-                        + str(repl_set) + " (afr)" )
+                print (" "*offset + "|\n" + " "*offset + "+-- %s" % subvol_type_text
+                        + str(subvol_id) + " (%s)" % subvol_xlator )
                 padding = " "*offset + link_char + "     "
                 for brick_path in subvol:
                     brick_info = self.brick[brick_path].printBrick()
                     print (padding + "|\n" + padding + "+--" + brick_info)
-                repl_set += 1
+                subvol_id += 1
         print
 
     def clientCount(self,vol_stat_clients_xml, peer_ip_list):
