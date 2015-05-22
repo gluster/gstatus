@@ -970,7 +970,10 @@ class Volume:
                         if self.brick[brick_path].up:
                             self.usable_capacity += self.brick[brick_path].size
                             self.used_capacity += self.brick[brick_path].used
-                            break
+
+                            # for replica volumes, only include one of the bricks in the calculations
+                            if self.replicaCount > 1:
+                                break
             else:
                 self.usable_capacity = self.raw_capacity
                 self.used_capacity = self.raw_used
@@ -1056,9 +1059,9 @@ class Volume:
     def updateSelfHeal(self,output_mode):
         """ Updates the state of self heal for this volume """
         
-        # first check if this volume is a replicated volume, if not
+        # first check if this volume is a replicated or disperse volume, if not
         # set the state string to "not applicable"
-        if 'replicate' not in self.typeStr.lower():
+        if ('replicate' not in self.typeStr.lower()) and ('disperse' not in self.typeStr.lower()):
             self.self_heal_string = 'N/A'
             return
             
@@ -1212,9 +1215,9 @@ class Volume:
 
             # Replicated volume
             repl_set = 0
-            num_repl_sets = len(self.replica_set)
+            num_repl_sets = len(self.subvolumes)
             link_char = "|"
-            for replica_set in self.replica_set:
+            for subvol in self.subvolumes:
 
                 if repl_set == (num_repl_sets -1):
                     link_char = " "
@@ -1222,7 +1225,7 @@ class Volume:
                 print (" "*offset + "|\n" + " "*offset + "+-- Repl Set "
                         + str(repl_set) + " (afr)" )
                 padding = " "*offset + link_char + "     "
-                for brick_path in replica_set:
+                for brick_path in subvol:
                     brick_info = self.brick[brick_path].printBrick()
                     print (padding + "|\n" + padding + "+--" + brick_info)
                 repl_set += 1
