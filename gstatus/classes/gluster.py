@@ -329,10 +329,11 @@ class Cluster:
                 brick_owner = self.node[node_uuid]
                 brick_owner.brick[brick_path] = new_brick
 
-                if new_volume.replicaCount > 1:
+                if (new_volume.replicaCount > 1) or (new_volume.disperseCount > 0):
                     repl.append(brick_path)
+                    bricks_per_subvolume = max(new_volume.replicaCount, new_volume.disperseCount)
                     ctr +=1
-                    if ctr > new_volume.replicaCount:
+                    if ctr > bricks_per_subvolume:
                         ctr = 1
 
                         # add this replica set to the volume's info
@@ -341,13 +342,13 @@ class Cluster:
                         repl =[]
 
             # By default from gluster 3.3 onwards, self heal is enabled for 
-            # all replicated volumes. We look at the volume type, and if it 
+            # all replicated/disperse volumes. We look at the volume type, and if it
             # is replicated and hasn't had self-heal explicitly disabled the
             # self heal state is inferred against the nodes that contain the 
             # bricks for the volume. With this state in place, the updateState
             # method can cross-check to see what is actually happening
 
-            if 'replicate' in new_volume.typeStr.lower():
+            if ('replicate' in new_volume.typeStr.lower()) or ('disperse' in new_volume.typeStr.lower()):
                 
                 heal_enabled = True                     # assume it's on
                     
@@ -961,9 +962,9 @@ class Volume:
 
         else:
             
-            # have to account for the available space in each replica set
+            # have to account for the available space in each subvolume
             # for the calculation
-            if self.replicaCount > 1:
+            if (self.replicaCount > 1) or (self.disperseCount > 0):
                 for subvolume in self.subvolumes:
                     for brick_path in subvolume:
                         if self.brick[brick_path].up:
@@ -989,34 +990,43 @@ class Volume:
         else:
             self.volume_state = 'up'
             
-            # Replicated volume
-            if self.replicaCount > 1:
-                # this is a replicated volume, so check the status of the 
-                # bricks in each replica set
+
+            if (self.replicaCount > 1) or (self.disperseCount > 0):
+                # this volume has inbuilt data protection, so check the status of the
+                # bricks in each subvolume to determine overall volume health
     
-                set_state = []
+                subvolume_states = []
+
                 for subvolume in self.subvolumes:
                     state = 0       # initial state is 0 = all good, n > 0 = n bricks down
     
                     for brick_path in subvolume:
                         if not self.brick[brick_path].up:
                             state += 1
-                    set_state.append(state)
+                    subvolume_states.append(state)
     
-                self.subvolume_state = set_state
+                self.subvolume_state = subvolume_states
     
-                worst_set = max(set_state)
+                worst_subvolume = max(subvolume_states)
                 
-                # check if we have a problem
-                if worst_set > 0:
-                    if worst_set == self.replicaCount:
-                        self.volume_state += "(partial)"
+                # check if we have a problem (i.e. > 0)
+                if worst_subvolume > 0:
+
+                    subvolume_problem = max(self.replicaCount, (self.redundancyCount + 1))
+
+                    if (worst_subvolume == subvolume_problem):
+                        # if this volume is only contains one subvolume, and the bricks down > redundancy level
+                        # then the volume state needs to show down
+                        if (len(self.subvolumes) == 1):
+                            self.volume_state = 'down'
+                        else:
+                            self.volume_state += "(partial)"
                     else:
                         self.volume_state += "(degraded)"
-            
+
             else:
                 
-                # This volume is not replicated, so brick disruption leads
+                # This volume is not 'protected', so any brick disruption leads
                 # straight to a 'partial' availability state
                 if up_bricks != total_bricks:
                     self.volume_state += '(partial) '
