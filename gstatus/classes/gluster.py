@@ -629,6 +629,11 @@ class Cluster:
                         # now get low level info to check for heal backlog
                         self.volume[volume_name].updateSelfHeal(self.output_mode)
 
+                        if 'UNAVAILABLE' in self.volume[volume_name].self_heal_string:
+                            # add message to cluster messages
+                            self.messages.append('WARNING -> self heal query did not complete for %s. Debug with -D or use -t to increase cmd timeout' % volume_name)
+
+
             this_state = self.volume[volume_name].volume_state
 
             if this_state == 'up':
@@ -1138,7 +1143,7 @@ class Volume:
             # vol heal command failed - just flag the problem
             if cfg.debug:
                 print "Volume updateSelfHeal. Query for self heal details timed out - maybe run again with a larger -t value?"
-            self.self_heal_string += " BACKLOG DATA UNAVAILABLE"
+            self.self_heal_string += " HEAL DATA UNAVAILABLE"
 
     def setSelfHealStats(self):
         """ return a string active/enable self heal states for the
