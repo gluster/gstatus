@@ -99,15 +99,15 @@ Running the tool
 
 Running gstatus with a -h flag shows the following options;
 
-[root@glfs35-1 gstatus]# gstatus -h
-Usage: gstatus [options]
+[root@gfs-ec1 gstatus]# ./gstatus.py -h
+Usage: gstatus.py [options]
 
 Options:
   --version             show program's version number and exit
   -h, --help            show this help message and exit
   -s, --state           show highlevel health of the cluster
   -v, --volume          volume info (default is ALL, or supply a volume name)
-  -n, --no-selfheal     turn of self heal backlog checks (faster)
+  -b, --backlog         Look deeper at self heal state
   -a, --all             show all cluster information (-s with -v)
   -u UNITS, --units=UNITS
                         display capacity units in DECimal or BINary format (GB
@@ -117,6 +117,11 @@ Options:
                         produce output in different formats - json, keyvalue
                         or console(default)
   -D, --debug           turn on debug mode
+  -w, --without-progress
+                        turn off progress updates to user during data
+                        gathering
+  -t TIMEOUT, --timeout=TIMEOUT
+                        gluster command timeout value (secs)
 
 
 
@@ -152,7 +157,7 @@ Options:
    Nodes    :  5/ 5		Volumes:  2 Up
    Self Heal:  5/ 4		          0 Up(Degraded)
    Bricks   :  8/ 8		          0 Up(Partial)
-   Clients  :     5                       0 Down
+   Clients  :     5               0 Down
 
 <snip>
 
@@ -169,9 +174,9 @@ Options:
   depicting the brick layout within the volume. This feature was is inspired 
   by work of Fred van Zwieten and Niels De Vos in the 'lsgvt' project.
 
-TIP: Normally for a volume listing, gstatus will issue a "vol heal X info"to show the 
-user any heal backlog. This takes more time, so using -n (e.g. gstatus -an) 
-can be used to skip this check, making the command faster to run.
+TIP: To keep the tool responsive, gstatus will not perform a vol heal <vol> info
+command - since this can take time. However, if you suspect self heal is active
+you can use the -b setting to check for a backlog of file heal operations.
 
 
 The examples directory included in the archive contains a number of scenarios
@@ -182,16 +187,13 @@ Tested on
 =========
 - 4 node vm cluster, running Red Hat Storage 2.1 (RHEL 6.4, glusterfs 3.4)
 - 4 node vm cluster, based on RHEL 6.5 with upstream glusterfs 3.5 beta 3
+- 6 node vm cluster, based on CentOS 7.1, glusterfs 3.7 beta2
 
 
 Known Issues
 ============
-1) After a node is taken down, gluster uses a node timeout to confirm that the
-   node has actually gone. This causes the tool to appear to hang as this 
-   timeout is honoured in gluster, when the tool is invoked within 30secs of a
-   node shutdown.
-   
-2) Normally every node will be capacity nodes. However, when nodes are added to 
+
+1) Normally every node will be capacity nodes. However, when nodes are added to
    the cluster for quorum purposes, the Self Heal field shows more nodes with Self 
    Heal active than needed. This is due to the arbitration nodes also running the 
    self head daemon.
