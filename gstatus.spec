@@ -66,7 +66,7 @@ rm -rf %{buildroot}
 
 %changelog
 * Mon May 25 2015 Paul Cuzner <pcuzner@redhat.com> 0.64-1
-- code refactored 
+- code refactored
 - disperse volume support added for glusterfs 3.7
 - fix version information to align with re-branding
 
