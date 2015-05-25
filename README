@@ -60,6 +60,10 @@ need the .py extension.
 3. invoke the script using
    ./gstatus.py <options>
 
+Upgrade Notes
+=============
+1. If you're upgrading via rpm, first remove the existing version and then install
+the new one
 
 
 Volume States

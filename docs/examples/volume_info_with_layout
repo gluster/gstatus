@@ -1,0 +1,48 @@
+[root@rhs1-1 gstatus-tests]# gstatus -vl
+ 
+      Status: HEALTHY           Capacity: 32.00 GiB(raw bricks)
+   Glusterfs: 3.4.0.59rhs                 10.00 GiB(raw used)
+  OverCommit: Yes                         48.00 GiB(usable from volumes)
+
+Volume Information
+	repl             UP - 4/4 bricks up - Distributed-Replicate
+	                 Capacity: (31% used) 5.00 GiB/16.00 GiB (used/total)
+	                 Self Heal:  4/ 4   All files in sync
+	                 Protocols: glusterfs:on  NFS:on  SMB:on
+	                 Gluster Clients : 5
+
+	repl------------ +
+	                 |
+                Distribute (dht)
+                         |
+                         +-- Repl Set 0 (afr)
+                         |     |
+                         |     +--rhs1-1:/rhs/brick1/repl(UP) 3.00 GiB/9.00 GiB 
+                         |     |
+                         |     +--rhs1-2:/rhs/brick1/repl(UP) 2.00 GiB/7.00 GiB 
+                         |
+                         +-- Repl Set 1 (afr)
+                               |
+                               +--rhs1-3:/rhs/brick1/repl(UP) 2.00 GiB/7.00 GiB 
+                               |
+                               +--rhs1-4:/rhs/brick1/repl(UP) 2.00 GiB/7.00 GiB 
+
+
+	vol2             UP - 4/4 bricks up - Distribute
+	                 Capacity: (31% used) 10.00 GiB/32.00 GiB (used/total)
+	                 Self Heal: N/A
+	                 Protocols: glusterfs:on  NFS:on  SMB:on
+	                 Gluster Clients : 5
+
+	vol2------------ +
+	                 |
+                Distribute (dht)
+                         |
+                         +--rhs1-1:/rhs/brick1/vol2(UP) 3.00 GiB/9.00 GiB 
+                         |
+                         +--rhs1-2:/rhs/brick1/vol2(UP) 2.00 GiB/7.00 GiB 
+                         |
+                         +--rhs1-3:/rhs/brick1/vol2(UP) 2.00 GiB/7.00 GiB 
+                         |
+                         +--rhs1-4:/rhs/brick1/vol2(UP) 2.00 GiB/7.00 GiB 
+

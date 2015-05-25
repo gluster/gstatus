@@ -60,7 +60,10 @@ To Do List / Change Log
   - added -n option to skip self heal info gathering
   - misc doc updates and refresh of examples directory
   
-  
+0.64
+  - support added for disperse volumes
+
+
 0.65 planned
   - add task info to the volume state to show when rebalance is active
   - provide threshold triggers
@@ -77,6 +80,8 @@ To Do List / Change Log
 Items being considered
 - RFE - Peter AuYeung - for volume capacity, include quota information if enabled
 - RFE - Peter AuYeung - for the xml output provide a volume option
+- add a highlevel vol type to simplify decision logic
+
 
 
 Known BUGS
@@ -86,4 +91,12 @@ Known BUGS
 - gluster is not returning valid xml when nodes are not present in the config. The problem gets worse with cluster size, and disruption. Current testing has nly allowed 4 node tests to be performed. WORKED AROUND 0.4 onwards
 - when multiple replicated volumes are present, the count of self heal processes is incorrect
 
+- for disperse volumes the self heal daemon information is not returned on the vol status command glusterfs 3.7.0
+  - pending upstream code merge - http://review.gluster.org/10764
+
+
+update code to use object in all class statement
+re-align to 80 char limit
+move to spaces not tabs
+line 315 - can this error message be more descriptive?
 

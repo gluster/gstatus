@@ -457,11 +457,11 @@ class Cluster:
         for uuid in self.node:
             this_node = self.node[uuid]
             if this_node.state != '1':
-                self.messages.append("Cluster node '%s' is down" % (this_node.nodeName()))
+                self.messages.append("Cluster node '%s' is down" % (this_node.node_name()))
                 self.status = 'unhealthy'
 
             if this_node.self_heal_enabled != this_node.self_heal_active:
-                self.messages.append("Self heal daemon is down on %s" % (this_node.nodeName()))
+                self.messages.append("Self heal daemon is down on %s" % (this_node.node_name()))
                 self.status = 'unhealthy'
 
         # 3. Check the bricks
@@ -623,11 +623,11 @@ class Cluster:
                                         self.node[uuid].self_heal_active = False
 
                     # update the self heal flags, based on the vol status
-                    self.volume[volume_name].setSelfHealStats()  # high level info
+                    self.volume[volume_name].set_self_heal_stats()  # high level info
 
                     if self_heal_backlog:
                         # now get low level info to check for heal backlog
-                        self.volume[volume_name].updateSelfHeal(self.output_mode)
+                        self.volume[volume_name].update_self_heal(self.output_mode)
 
                         if 'UNAVAILABLE' in self.volume[volume_name].self_heal_string:
                             # add message to cluster messages
@@ -751,7 +751,7 @@ class Cluster:
             vol_name = volume_xml.find('./volName').text
 
             # process the volume xml
-            self.volume[vol_name].clientCount(volume_xml, self.ip_list)
+            self.volume[vol_name].client_count(volume_xml, self.ip_list)
 
             # add the volumes unique set of clients to the clusters set
             self.client_set.update(self.volume[vol_name].client_set)
@@ -1196,7 +1196,7 @@ class Volume:
 
             # Distributed layout
             for brick_name in self.brick_order:
-                brick_info = self.brick[brick_name].printBrick()
+                brick_info = self.brick[brick_name].print_brick
                 print (" " * offset + "|\n" + " " * offset + "+--" + brick_info)
 
         else:
@@ -1216,7 +1216,7 @@ class Volume:
                        + str(subvol_id) + " (%s)" % subvol_xlator)
                 padding = " " * offset + link_char + "     "
                 for brick_path in subvol:
-                    brick_info = self.brick[brick_path].printBrick()
+                    brick_info = self.brick[brick_path].print_brick
                     print (padding + "|\n" + padding + "+--" + brick_info)
                 subvol_id += 1
         print

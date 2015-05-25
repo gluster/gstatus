@@ -1,13 +1,13 @@
 Name:		gstatus
-Version:	0.63
-Release:	2%{?dist}
-Summary:	Show the current health of the elements in a Gluster Trusted Pool
+Version:	0.64
+Release:	1%{?dist}
+Summary:	Show the current health of the component in a glusterfs Trusted Storage Pool
 
 Group:		Applications/System
 License:	GPLv3
-URL:		https://forge.gluster.org/gstatus
+URL:		https://github.com/pcuzner/gstatus
 
-# download from https://forge.gluster.org/gstatus/gstatus/archive-tarball/v%{version}
+# download from https://github.com/pcuzner/gstatus/archive/master.zip
 # rename to gstatus-%{version}.tar.gz
 
 Source0:	%{name}-%{version}.tar.gz
@@ -36,8 +36,8 @@ log the state of the cluster to a file, and interpret with Splunk,
 Logstash or nagios/zabbix.
 
 Errors detected, are listed in plain english together and provide an
-easy way to assess the impact to a service, based on a disruptive event 
-within the trusted pool (cluster).
+easy way to assess the impact to a service, following a disruptive event
+that affects the trusted pool.
 
 %prep
 %setup -q -n %{name}
@@ -58,15 +58,21 @@ rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
-%doc README examples
+%doc README
 %{_bindir}/gstatus
 %{python2_sitelib}/gstatus/
 %{python2_sitelib}/gstatus-%{version}-*.egg-info/
 
 
 %changelog
+* Mon May 25 2015 Paul Cuzner <pcuzner@redhat.com> 0.64-1
+- code refactored 
+- disperse volume support added for glusterfs 3.7
+- fix version information to align with re-branding
+
 * Mon Mar 02 2015 Paul Cuzner <pcuzner@redhat.com> 0.63-2
 - minor update removing the dependency on python-netifaces module
+
 * Mon Jan 12 2015 Paul Cuzner <pcuzner@redhat.com> 0.63
 - switch defineNodes method from "gluster peer status" to "gluster pool list"
 - added timeout threshold to all gluster commands used

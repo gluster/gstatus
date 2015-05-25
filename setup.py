@@ -27,10 +27,12 @@ setup(
     url = "https://github.com/pcuzner/gstatus",
     license = "GPLv3",
     packages = [
-        "gstatuscfg",
-        "libgluster",
-        "libcommand",
-        "libutils"],
+        "gstatus",
+        "gstatus.gstatuscfg",
+        "gstatus.libgluster",
+        "gstatus.libcommand",
+        "gstatus.libutils"
+        ],
     scripts = [ "gstatus.py" ],
     cmdclass = {
         "install_scripts" : strip_py_ext
