@@ -1,0 +1,92 @@
+.\" Man page for gstatus
+.\" Contact pcuzner@redhat.com to correct errors or typos
+.TH gstatus 8 "08 July 2015" "0.64-2" "gstatus man page"
+.SH NAME
+gstatus \- query the health of a glusterfs trusted storage pool
+.SH SYNOPSIS
+\fBgstatus\fR [-a|--all] [-b|--backlog] [-D|--debug] [-l|--layout] [-o|--output-mode json|keyvalue|\fIconsole\fR] [-s|--state] [-t|--timeout secs] [-u|--units dec|\fIbin\fR] [-v|--volume \fIALL\fR|volume name] [-w|--without-progress]
+.SH DESCRIPTION
+CLI command to provide a status check on the cluster’s health, providing
+a view of node, volume state (up, degraded, partial or down), brick 
+up/down states and capacity information by volume (usable, used).
+.PP
+In addition to the interactive model, a json or keyvalue output option 
+is also available through '-o json|keyvalue'. By utilising -o, you can 
+log the state of the cluster to a file, and interpret with Splunk, 
+Logstash or nagios/zabbix.
+.PP 
+Errors detected, are listed in simple terms and provide an easy way to 
+assess the impact to a service, following a disruptive event that
+affects the trusted pool.
+
+.SH OPTIONS
+.PP
+.B -a, --all
+.RS
+provides the same output as an invocation using -s and -v
+.RE
+.PP
+.B -b, --backlog
+.RS
+by default the list of files waiting to be healed is not checked since the command to determine this state may take several seconds to complete. If an accurate view of self heal state needs to be included in the output, use -b to trigger the additional command "vol heal <vol> info" to be executed.
+.RE
+.PP
+.B -D, --debug
+.RS
+enable more verbose output to aid debugging
+.RE
+.PP
+.B -l, --layout
+.RS
+shows the physical layout of the volume by brick, making it easier to understand the relationships between servers and bricks
+.RE
+.PP
+.B -o, --output-mode \fRjson | keyvalue | \fIconsole\fR
+.RS
+control how the data gathered by the tool is presented back to the user. The json and keyvalue options allow a summary of the clusters state to be captured in a format that could be recorded in a log file for trending, or analysis purposes. When this option is not specfied, the default output mode is 'console'
+.RE
+.PP
+.B -s, --state
+.RS
+show the high level state of the trusted storage pool, summarising node counts and capacity utilisation data
+.RE
+.PP
+.B -t, --timeout\fR secs
+.RS
+gstatus issues multiple commands to gluster to gather state data. On busy systems these commands could take several seconds, which can make the tool seem unresponsive. Rather than force the admin to wait for prolonged periods, a command timeout is enforced. By default gstatus uses a timeout of \fB5\fR seconds (set in gstatuscfg/config), but this may be increased using the '-t' option
+.RE
+.PP
+.B -u, --units  \fRdec|\fIbin\fR
+.RS
+capacity can be calculated either in decimal or binary representations (TB vs TiB). The default is to provide all capacity information in binary format (i.e. GiB, TiB), which matches the methods used by tools such as 'df'.
+.RE
+.PP
+.B -v, --volume \fIALL\fR | volume-name
+.RS
+Provide detailed information about the volume including
+.RE
+.PP
+.B -w, --without-progress
+.RS
+turn of the progress text normally shown as data is gathered and assembled
+.RE
+.SH EXAMPLES
+.B gstatus -a
+.br
+Gather and present cluster and volume information
+.PP 
+.B gstatus -al
+.br
+Show cluster and volume information, and for each volume show the brick layout which includes individual capacity utilisation information
+.PP
+.B gstatus -o keyvalue
+.br
+Gather the data and format the results into a keyvalue string. Useful to capture point-in-time configuration information for capacity trending or forwarding to other systems for health monitoring.
+.SH SEE ALSO
+gluster(8)
+.SH BUGS
+1) gstatus supports distributed, replicated and disperse volume types only
+.PP
+2) Normally every node will be capacity nodes. However, when nodes are added to the cluster for quorum purposes, the Self Heal field shows more nodes with Self Heal active than needed. This is due to the arbitration nodes also running the self head daemon.
+.SH AUTHOR
+Paul Cuzner (pcuzner@redhat.com)

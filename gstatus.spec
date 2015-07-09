@@ -1,6 +1,6 @@
 Name:		gstatus
 Version:	0.64
-Release:	1%{?dist}
+Release:	2%{?dist}
 Summary:	Show the current health of the component in a glusterfs Trusted Storage Pool
 
 Group:		Applications/System
@@ -50,7 +50,9 @@ CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
 %install
 rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --root %{buildroot} --install-scripts %{_bindir}
-
+mkdir -p %{buildroot}%{_mandir}/man8
+install -m 0644 gstatus.8 %{buildroot}%{_mandir}/man8/
+gzip %{buildroot}%{_mandir}/man8/gstatus.8
 
 %clean
 rm -rf %{buildroot}
@@ -62,9 +64,13 @@ rm -rf %{buildroot}
 %{_bindir}/gstatus
 %{python2_sitelib}/gstatus/
 %{python2_sitelib}/gstatus-%{version}-*.egg-info/
+%{_mandir}/man8/gstatus.8.gz
 
 
 %changelog
+* Thu Jul 09 2015 Paul Cuzner <pcuzner@redhat.com> 0.64-2
+- added man page
+
 * Mon May 25 2015 Paul Cuzner <pcuzner@redhat.com> 0.64-1
 - code refactored
 - disperse volume support added for glusterfs 3.7

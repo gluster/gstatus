@@ -4,7 +4,7 @@
 from optparse import OptionParser  # command line option parsing
 from datetime import datetime
 
-from gstatus.gstatuscfg import config as cfg
+import gstatus.gstatuscfg.config as cfg
 from gstatus.libutils.utils import display_bytes, version_ok
 from gstatus.libgluster.cluster import Cluster
 
