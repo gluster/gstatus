@@ -1,6 +1,6 @@
 Name:		gstatus
 Version:	0.64
-Release:	2%{?dist}
+Release:	3%{?dist}
 Summary:	Show the current health of the component in a glusterfs Trusted Storage Pool
 
 Group:		Applications/System
