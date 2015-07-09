@@ -381,7 +381,7 @@ class Volume(object):
         vol_description['Distributed-Replicate'] = vol_description['Replicate']
         vol_description['Distributed-Disperse'] = vol_description['Disperse']
 
-        supported_volume_types = ['Replicate', 'Distribute', 'Distributed-Replicate', 'Disperse']
+        supported_volume_types = ['Replicate', 'Distribute', 'Distributed-Replicate', 'Disperse', 'Distributed-Disperse']
 
         if self.typeStr not in supported_volume_types:
             print "\tDisplay of this volume type has yet to be implemented"
