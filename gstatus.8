@@ -87,6 +87,8 @@ gluster(8)
 .SH BUGS
 1) gstatus supports distributed, replicated and disperse volume types only
 .PP
-2) Normally every node will be capacity nodes. However, when nodes are added to the cluster for quorum purposes, the Self Heal field shows more nodes with Self Heal active than needed. This is due to the arbitration nodes also running the self head daemon.
+2) gluster vol status does not report on self heal heal for disperse volumes, so gstatus is unable to provide an accurate summary of self heal state for this volume type
+.PP
+3) Normally every node will be capacity nodes. However, when nodes are added to the cluster for quorum purposes, the Self Heal field shows more nodes with Self Heal active than needed. This is due to the arbitration nodes also running the self head daemon.
 .SH AUTHOR
 Paul Cuzner (pcuzner@redhat.com)
