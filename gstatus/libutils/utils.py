@@ -1,4 +1,4 @@
-
+import string
 
 def display_bytes(in_bytes, units='bin'):
     """
@@ -54,14 +54,12 @@ def version_ok(this_version, target_version):
     this_version = str(this_version)
     target_version = str(target_version)
 
-    # Account for version strings passes not in X.Y format
-    if this_version.count('.') > 1:
-        this_version = major_minor(this_version)
+    # normalise the maj/minor components of the version for comparison
+    this_version = major_minor(this_version)
+    target_version = major_minor(target_version)
 
-    if target_version.count('.') > 1:
-        target_version = major_minor(target_version)
-
-    (this_major, this_minor) = this_version.split('.')
+    # strip out any non numeric characters from the current version string
+    (this_major, this_minor) = this_version.translate(None,string.ascii_letters).split('.')
     (tgt_major, tgt_minor) = target_version.split('.')
 
     if (int(this_major) >= int(tgt_major) and
@@ -75,5 +73,5 @@ def major_minor(version_string):
     """
     return the major.minor of a full version string
     """
-
-    return '.'.join(version_string.split('.')[:2])
+    stripped=version_string.translate(None,string.ascii_letters)
+    return '.'.join(stripped.split('.')[:2])
