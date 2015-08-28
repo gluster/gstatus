@@ -326,18 +326,8 @@ class Volume(object):
                             if match_found:
                                 break
 
-                        try:
-
-                            if cfg.debug:
-                                print "updateSelfHeal. using brick path match of %s" % brick_path
-
-                            self.brick[brick_path].heal_count = heal_count
-
-                        except:
-                            print "updateSelfHeal.Unable to apply self heal stats due to %s not matching existing" % (
-                                brick_path)
-                            print "brick objects, and can not continue."
-                            exit(16)
+                        if cfg.debug:
+                            print "updateSelfHeal. using brick path match of %s" % brick_path
 
                     total_heal_count += heal_count
 
@@ -455,8 +445,8 @@ class Volume(object):
 
                 # ignore the connections from the gluster nodes themselves
                 # that connect to the bricks.
-                if int(port_number) < 2048:
-                    continue
+                # if int(port_number) < 2048:
+                #     continue
 
                 # now we're left with connection information, so we count unique
                 # IPs as hosts connections, but also provide all connections

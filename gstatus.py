@@ -161,7 +161,7 @@ if __name__ == '__main__':
     parser.add_option("-v", "--volume", dest="volumes", action="store_true",
                       help="volume info (default is ALL, or supply a volume name)")
     parser.add_option("-b", "--backlog", dest="selfheal", action="store_true", default=False,
-                      help="Look deeper at self heal state")
+                      help="Look deeper at self heal state (Use with -a)")
     parser.add_option("-a", "--all", dest="everything", action="store_true", default=False,
                       help="show all cluster information (-s with -v)")
     parser.add_option("-u", "--units", dest="units", choices=['bin', 'dec'],
