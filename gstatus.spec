@@ -1,6 +1,6 @@
 Name:		gstatus
-Version:	0.64
-Release:	3%{?dist}
+Version:	0.65
+Release:	1%{?dist}
 Summary:	Show the current health of the component in a glusterfs Trusted Storage Pool
 
 Group:		Applications/System
@@ -27,12 +27,12 @@ Requires:	glusterfs >= 3.4
 
 %description
 CLI command to provide a status check on the cluster’s health, providing
-a view of node, volume state (up, degraded, partial or down), brick 
+a view of node, volume state (up, degraded, partial or down), brick
 up/down states and capacity information by volume (usable, used).
 
-In addition to the interactive model, a json or keyvalue output option 
-is also available through '-o json|keyvalue'. By utilising -o, you can 
-log the state of the cluster to a file, and interpret with Splunk, 
+In addition to the interactive model, a json or keyvalue output option
+is also available through '-o json|keyvalue'. By utilising -o, you can
+log the state of the cluster to a file, and interpret with Splunk,
 Logstash or nagios/zabbix.
 
 Errors detected, are listed in plain english together and provide an
@@ -68,6 +68,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Sat Aug 29 2015 Sachidananda Urs <surs@redhat.com> 0.65-1
+- Fixed bugs: 1250453, 1254432, 1254505, 1254514, 1254866, 1257092, 1257097
+- Removed RPMs from the repository
+
 * Thu Jul 09 2015 Paul Cuzner <pcuzner@redhat.com> 0.64-2
 - added man page
 
@@ -113,7 +117,7 @@ rm -rf %{buildroot}
 - fix - corrected cluster capacity calculations when brick(s) used by multiple volumes
 - added capacity overcommit flag if the same device is referenced by multiple bricks
 - added overcommit status field added to output (console,keyvalue,json)
-- added volume stats to json output mode  
+- added volume stats to json output mode
 - added info message when bricks are missing to confirm the capacity info is inaccurate
 - added -n option to skip self heal info gathering
 - misc doc updates and refresh of examples directory
@@ -126,7 +130,7 @@ rm -rf %{buildroot}
 - fix - workaround added for silent failure of gluster vol status clients
 
 * Wed Apr 2 2014 Paul Cuzner  <pcuzner@redhat.com> 0.5-0.1
-- updated to account for fqdn cluster definitions 
+- updated to account for fqdn cluster definitions
 
 * Mon Mar 24 2014 Paul Cuzner  <pcuzner@redhat.com> 0.5-0.1
 - Update to version 0.5
