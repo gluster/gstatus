@@ -4,6 +4,7 @@ from glob import glob
 import sys
 import os
 import xml.etree.ElementTree as ETree
+from xml.parsers.expat import ExpatError
 import gstatus.gstatuscfg.config as cfg
 import json
 
@@ -73,6 +74,7 @@ class Cluster(object):
         self.product_shortname = ''  # Community
 
         self.get_version()
+        self.nodes_down = 0
 
         self.ip_list = []  # list of IP's from all nodes
 
@@ -174,7 +176,11 @@ class Cluster(object):
 
             # DEBUG ------------------------------------------------------------
             if cfg.debug:
-                print "Creating a node object with uuid %s, with names of %s" % (node_info['uuid'], alias_list)
+                # Clean up all the empty strings in the list
+                self.alias_stripped = [ele for ele in alias_list if ele != '']
+
+                print "Creating a node object with uuid %s, with names of %s"%\
+                    (node_info['uuid'], self.alias_stripped)
             # ------------------------------------------------------------------
 
             new_node = Node(node_info['uuid'], node_info['connected'],
@@ -374,8 +380,9 @@ class Cluster(object):
             with open('/etc/redhat-storage-release', 'r') as RHS_version:
                 # example contents - Red Hat Storage Server 3.0
                 self.product_name = RHS_version.readline().rstrip()
-                lc_name = self.product_name.lower().replace('update', '.')
-                self.product_shortname = "RHGS v%s" % (''.join(lc_name.split()[4:]))
+                lc_name = self.product_name.replace('update', '.')
+                self.product_shortname = "RHGS Server v%s" %\
+                    (''.join(lc_name.split()[5:]))
         else:
             self.product_name = self.product_shortname = "Community"
 
@@ -422,12 +429,25 @@ class Cluster(object):
         for uuid in self.node:
             this_node = self.node[uuid]
             if this_node.state != '1':
-                self.messages.append("Cluster node '%s' is down" % (this_node.node_name()))
+                # https://bugzilla.redhat.com/show_bug.cgi?id=1254514,
+                # node_name comes as empty
+                # self.messages.append("Cluster node '%s' is down" %
+                # (this_node.node_name()))
+                self.nodes_down += 1
                 self.status = 'unhealthy'
 
             if this_node.self_heal_enabled != this_node.self_heal_active:
-                self.messages.append("Self heal daemon is down on %s" % (this_node.node_name()))
+                # https://bugzilla.redhat.com/show_bug.cgi?id=1254514,
+                # decided to remove the self-heal status as it is
+                # redunant information
+                # self.messages.append("Self heal daemon is down on %s" % (this_node.node_name()))
                 self.status = 'unhealthy'
+
+        # Print the number of nodes that are down
+        if self.nodes_down == 1:
+            self.messages.append("One of the nodes in the cluster is down")
+        elif self.nodes_down > 1:
+            self.messages.append("%s nodes in the cluster are down"%self.nodes_down)
 
         # 3. Check the bricks
         for brick_name in self.brick:
@@ -706,7 +726,10 @@ class Cluster(object):
 
         # At this point the command worked, so we can process the results
         xml_string = ''.join(cmd.stdout)
-        xml_root = ETree.fromstring(xml_string)
+        try:
+            xml_root = ETree.fromstring(xml_string)
+        except ExpatError:
+            print "Malformed xml, try again later."
 
         volumes = xml_root.findall('.//volume')
 
