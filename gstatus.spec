@@ -40,7 +40,7 @@ easy way to assess the impact to a service, following a disruptive event
 that affects the trusted pool.
 
 %prep
-%setup -q -n %{name}
+%setup -q -n %{name}-%{version}
 
 
 %build
