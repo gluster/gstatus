@@ -16,6 +16,23 @@ def set_active_peer():
     """ Supplemental function to set the target node for the GlusterCommand
         instances """
 
+    def __glusterd_address():
+        """ function to set the local address of glusterd - either localhost (default) or the bind address """
+        bind_parm = "transport.socket.bind-address"
+        local_glusterd = 'localhost'
+
+        # assume the glusterd.vol file exists and this is a gluster node
+        with open('/etc/glusterfs/glusterd.vol') as config_file:
+            config = config_file.readlines()
+
+        if config:
+            for cfg_item in config:
+                if not cfg_item.startswith("#") and bind_parm in cfg_item:
+                    local_glusterd = cfg_item.rstrip().split(' ')[-1]
+                    break
+
+        return local_glusterd
+
     def __port_open(host_name='localhost'):
         port_number = 24007
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -25,7 +42,7 @@ def set_active_peer():
 
     listening_peer = ''
     # we first look at glusterd on the local machine
-    if __port_open():
+    if __port_open(__glusterd_address()):
         listening_peer = 'localhost'
     else:
         # Get a list of peers
@@ -88,7 +105,7 @@ class GlusterCommand(object):
 
         if thread.is_alive():
             if cfg.debug:
-                print ('Gluster_Command. Response from glusterd has exceeded the %d secs timeout, terminating the request'
+                print ('Gluster_Command. Response from glusterd has exceeded %d secs timeout, terminating the request'
                        % cfg.CMD_TIMEOUT)
             os.killpg(self.cmdProcess.pid, signal.SIGTERM)
             self.rc = -1
