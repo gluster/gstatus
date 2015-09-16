@@ -27,6 +27,12 @@ class Node(object):
         """
         Return a shortname or IP for this node
         """
-        # if the shortname is not blank, we return that otherwise pass 
-        # back the IP address of the node
-        return self.alias_list[1] if self.alias_list[1] != '' else self.alias_list[0]
+        # if there is only one non-empty element, return that as the node name
+        # otherwise, try and return the shortname
+        if len(filter(None, self.alias_list)) == 1:
+            # return the first non empty element
+            return ''.join(filter(None, self.alias_list))
+        else:
+            # pass back the shortname - normally element 1
+            return self.alias_list[1] if self.alias_list[1] != '' else self.alias_list[0]
+
