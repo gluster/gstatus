@@ -98,6 +98,9 @@ class GlusterCommand(object):
             self.stdout = stdout.split('\n')[:-1]
             self.stderr = stderr.split('\n')[:-1]
 
+        # use cfg.CMD_TIMEOUT value, to wait till user specified timeout.
+        self.timeout = cfg.CMD_TIMEOUT
+
         thread = threading.Thread(target=command_thread)
         thread.start()
 
@@ -106,7 +109,7 @@ class GlusterCommand(object):
         if thread.is_alive():
             if cfg.debug:
                 print ('Gluster_Command. Response from glusterd has exceeded %d secs timeout, terminating the request'
-                       % cfg.CMD_TIMEOUT)
+                       % self.timeout)
             os.killpg(self.cmdProcess.pid, signal.SIGTERM)
             self.rc = -1
 
