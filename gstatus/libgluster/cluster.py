@@ -109,7 +109,7 @@ class Cluster(object):
             print "This cluster doesn't have any volumes/daemons running."
             print "The output below shows the current nodes attached to this host.\n"
 
-            cmd = GlusterCommand('gluster pool list')
+            cmd = GlusterCommand('gluster pool list', timeout=cfg.CMD_TIMEOUT)
             cmd.run()
             for line in cmd.stdout:
                 print line
@@ -138,7 +138,7 @@ class Cluster(object):
             # display a progress message
             sys.stdout.write("Processing nodes" + " " * 20 + "\n\r\x1b[A")
 
-        cmd = GlusterCommand('gluster pool list --xml')
+        cmd = GlusterCommand('gluster pool list --xml', timeout=cfg.CMD_TIMEOUT)
         cmd.run()
 
         if cmd.rc != 0:
@@ -200,7 +200,7 @@ class Cluster(object):
             # print a progress message
             sys.stdout.write("Building volume objects" + " " * 20 + "\n\r\x1b[A")
 
-        cmd = GlusterCommand("gluster vol info --xml")
+        cmd = GlusterCommand("gluster vol info --xml", timeout=cfg.CMD_TIMEOUT)
         cmd.run()
         # (rc, vol_info) = issueCMD("gluster vol info --xml")
 
@@ -344,7 +344,8 @@ class Cluster(object):
 
             this_volume = self.volume[volume_name]
 
-            cmd = GlusterCommand("gluster snap list %s" % volume_name)
+            cmd = GlusterCommand("gluster snap list %s" % volume_name, \
+                                 timeout=cfg.CMD_TIMEOUT)
             cmd.run()
             # (rc, snap_info) = issueCMD("gluster snap list %s"%(volume_name))
 
@@ -508,7 +509,8 @@ class Cluster(object):
             # in the started state, when issuing the vol status command
             if self.volume[volume_name].status == 1:
 
-                cmd = GlusterCommand("gluster vol status %s detail --xml" % volume_name)
+                cmd = GlusterCommand("gluster vol status %s detail --xml"%volume_name,
+                                     timeout=cfg.CMD_TIMEOUT)
                 # (rc, vol_status) = issueCMD("gluster vol status %s detail --xml"%(volume_name))
                 cmd.run()
 
@@ -538,7 +540,8 @@ class Cluster(object):
                 # Issue a vol status then use the output to look for active tasks and self heal
                 # state information
                 # -----------------------------------------------------------------------------
-                cmd = GlusterCommand("gluster vol status %s --xml" % volume_name)
+                cmd = GlusterCommand("gluster vol status %s --xml"%volume_name,
+                                     timeout=cfg.CMD_TIMEOUT)
                 cmd.run()
 
                 # (rc, vol_status) = issueCMD("gluster vol status %s --xml"%(volume_name))
@@ -709,7 +712,8 @@ class Cluster(object):
             # print a progress message
             sys.stdout.write("Processing gluster client connections" + " " * 20 + "\n\r\x1b[A")
 
-        cmd = GlusterCommand("gluster vol status all clients --xml")
+        cmd = GlusterCommand("gluster vol status all clients --xml",
+                             timeout=cfg.CMD_TIMEOUT)
         cmd.run()
 
         # (rc, vol_clients) = issueCMD("gluster vol status all clients --xml")
