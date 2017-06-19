@@ -11,4 +11,4 @@ def init():
     min_version = 3.4
     snapshot_support = 3.6
     no_progress_msgs = False
-    CMD_TIMEOUT = 5
+    CMD_TIMEOUT = 10

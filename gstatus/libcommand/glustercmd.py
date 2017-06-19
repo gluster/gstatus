@@ -77,6 +77,16 @@ class GlusterCommand(object):
 
         self.stdout = []
         self.stderr = []
+        # Initialize the environment, and update PATH. In few cases there are
+        # chances that the env is empty, in such cases set PATH.
+        self.env = dict(os.environ)
+        # Try to append to path, don't overwrite
+        try:
+            self.env['PATH'] += ':/usr/sbin:/usr/local/sbin'
+        except KeyError:
+            # Empty environment, create the varaible
+            self.env['PATH'] =  ':/usr/sbin:/usr/bin:/usr/local/sbin'
+            self.env['PATH'] += ':/usr/local/bin'
 
     def run(self):
         """ Run the command inside a thread to enable a timeout to be
@@ -92,6 +102,7 @@ class GlusterCommand(object):
                                                shell=True,
                                                stdout=subprocess.PIPE,
                                                stderr=subprocess.PIPE,
+                                               env=self.env,
                                                preexec_fn=os.setsid)
 
             stdout, stderr = self.cmdProcess.communicate()
