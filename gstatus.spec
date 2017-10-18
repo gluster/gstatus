@@ -1,5 +1,5 @@
 Name:		gstatus
-Version:	0.65
+Version:	0.66
 Release:	1%{?dist}
 Summary:	Show the current health of the component in a glusterfs Trusted Storage Pool
 
