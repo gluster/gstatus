@@ -292,7 +292,8 @@ class Volume(object):
                     # 3.4.0.59 added trailing '/' to brick path,so remove it!
                     brick_path = node + ":" + path_name.rstrip('/')
 
-                if line.lower().startswith('number'):
+                heal_count = 0
+                if line.lower().startswith('number') and line.split(':')[1] != ' -':
                     heal_count = int(line.split(':')[1])
 
                     try:
