@@ -7,6 +7,7 @@ from datetime import datetime
 import gstatus.gstatuscfg.config as cfg
 from gstatus.libutils.utils import display_bytes, version_ok
 from gstatus.libgluster.cluster import Cluster
+from gstatus.libutils.excepts import GlusterEmptyPool, GlusterNoPeerStatus, GlusterFailedBrick, GlusterFailedVolume, GlusterNotPeerNode, GlusterAnotherTransaction
 
 
 def console_mode():
@@ -128,10 +129,24 @@ def main():
         print " "
 
         # setup up the cluster object structure
-    cluster.initialise()
+    try:
+        cluster.initialise()
+    except [GlusterEmptyPool, GlusterNoPeerStatus] as e:
+        print e
+        exit(12)
+    except GlusterFailedBrick as e:
+        print e
+        exit(16)
 
     # run additional commands to get current state
-    cluster.update_state(self_heal_backlog, client_status)
+    try:
+        cluster.update_state(self_heal_backlog, client_status)
+    except [GlusterFailedVolume, GlusterNotPeerNode] as e:
+        print e
+        exit(16)
+    except GlusterAnotherTransaction as e:
+        print e
+        exit(42)
 
     # use the bricks to determine overall cluster disk capacity
     cluster.calc_capacity()
