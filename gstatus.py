@@ -49,7 +49,6 @@ def console_mode():
         print ("   Bricks      :%3d/%3d\t\t            %2d Up(Partial)"
                % (cluster.bricks_active, cluster.brick_count,
                   cluster.volume_summary['partial']))
-
         print ("   Connections :%3d/%4d%s%2d Down" %
                (cluster.num_clients,
                 cluster.num_connections,
@@ -132,7 +131,7 @@ def main():
     cluster.initialise()
 
     # run additional commands to get current state
-    cluster.update_state(self_heal_backlog)
+    cluster.update_state(self_heal_backlog, client_status)
 
     # use the bricks to determine overall cluster disk capacity
     cluster.calc_capacity()
@@ -175,6 +174,8 @@ if __name__ == '__main__':
     parser.add_option("-w", "--without-progress", dest="progress", action="store_true", default=False,
                       help="turn off progress updates to user during data gathering")
     parser.add_option("-t", "--timeout", dest="timeout", help="gluster command timeout value (secs)")
+    parser.add_option("-c", "--without-client-status", dest="client_status", action="store_false", default=True,
+                      help="disable building connectivity graph between bricks and clients")
     (options, args) = parser.parse_args()
 
     if options.timeout:
@@ -195,6 +196,8 @@ if __name__ == '__main__':
     display_units = options.units if options.units else 'bin'
 
     volume_list = []  # empty list of vols = show them all
+
+    client_status = options.client_status
 
     # default behaviours
     if volume_request and args:

@@ -485,7 +485,7 @@ class Cluster(object):
 
         return self.sh_enabled
 
-    def update_state(self, self_heal_backlog):
+    def update_state(self, self_heal_backlog, client_status):
         """ update the state of the cluster by processing the output of 'vol status' commands
 
             - vol status all detail --> provides the brick info (up/down, type), plus volume capacity
@@ -638,7 +638,8 @@ class Cluster(object):
         self.active_bricks()  # update active brick counter
         self.check_self_heal()
 
-        self.calc_connections()
+        if client_status:
+            self.calc_connections()
 
     def calc_capacity(self):
         """ update the cluster's overall capacity stats based on the
