@@ -15,6 +15,7 @@ from gstatus.libgluster.snapshot import Snapshot
 from gstatus.libcommand.glustercmd import set_active_peer, GlusterCommand
 from gstatus.libutils.utils import version_ok, get_attr
 from gstatus.libutils.network import is_ip, host_aliases, get_ipv4_addr
+from gstatus.libutils.excepts import GlusterEmptyPool, GlusterNoPeerStatus, GlusterFailedBrick, GlusterFailedVolume, GlusterNotPeerNode, GlusterAnotherTransaction
 
 
 class Cluster(object):
@@ -106,15 +107,14 @@ class Cluster(object):
 
         else:
             # no volumes in this cluster, print a message and abort
-            print "This cluster doesn't have any volumes/daemons running."
-            print "The output below shows the current nodes attached to this host.\n"
+            s = """This cluster doesn't have any volumes/daemons running.
+            The output below shows the current nodes attached to this host.\n"""
 
             cmd = GlusterCommand('gluster pool list', timeout=cfg.CMD_TIMEOUT)
             cmd.run()
             for line in cmd.stdout:
-                print line
-            print
-            exit(12)
+                s += line
+            raise GlusterEmptyPool(s)
 
     def get_node(self, node_string):
         """
@@ -142,9 +142,9 @@ class Cluster(object):
         cmd.run()
 
         if cmd.rc != 0:
-            print "glusterd did not respond to a peer status request, gstatus"
-            print "can not continue.\n"
-            exit(12)
+            s = "glusterd did not respond to a peer status request, gstatus"
+            s += "can not continue.\n"
+            raise GlusterNoPeerStatus(s)
 
             # define a list of elements in the xml that we're interested in
         field_list = ['hostname', 'uuid', 'connected']
@@ -274,10 +274,10 @@ class Cluster(object):
                     new_volume.node[node_uuid] = self.node[node_uuid]
 
                 except KeyError:
-                    print "Unable to associate brick %s with a peer in the cluster, possibly due" % brick_path
-                    print "to name lookup failures. If the nodes are not registered (fwd & rev)"
-                    print "to dns, add local entries for your cluster nodes in the the /etc/hosts file"
-                    sys.exit(16)
+                    s = "Unable to associate brick %s with a peer in the cluster, possibly due" % brick_path
+                    s += "to name lookup failures. If the nodes are not registered (fwd & rev)"
+                    s += "to dns, add local entries for your cluster nodes in the the /etc/hosts file"
+                    raise GlusterFailedBrick(s)
 
                 new_brick = Brick(brick_path, self.node[node_uuid], new_volume.name)
 
@@ -519,22 +519,24 @@ class Cluster(object):
                 # gluster_rc = int([line.replace('<',' ').replace('>',' ').split()[1]
                 #               for line in vol_status if 'opRet' in line][0])
 
+                xml_string = ''.join(cmd.stdout)
+                xml_obj = ETree.fromstring(xml_string)
+                errstr = str(xml_obj.find('.//opErrstr').text)
                 if cmd.rc == 0:
-                    xml_string = ''.join(cmd.stdout)
-                    xml_obj = ETree.fromstring(xml_string)
-
                     # Update the volume, to provide capacity and status information
                     self.volume[volume_name].update(xml_obj)
 
                 else:
+                    if errstr.startswith("Another transaction is in progress."):
+                        raise GlusterAnotherTransaction(errstr)
                     # Being unable to get a vol status for a known volume
                     # may indicate a peer transitioning to disconnected state
                     # so issue an error message and abort the script
-                    print "\n--> gstatus has been unable to query volume '" + volume_name + "'"
-                    print "\nPossible cause: cluster is currently reconverging after a node"
-                    print "has entered a disconnected state."
-                    print "\nResponse: Rerun gstatus or issue a peer status command to confirm\n"
-                    exit(16)
+                    s = "Unable to query volume '" + volume_name + "'"
+                    s += "\nPossible cause: cluster is currently reconverging after a node"
+                    s += "has entered a disconnected state."
+                    s += "\nResponse: Rerun gstatus or issue a peer status command to confirm\n"
+                    raise GlusterFailedVolume(s)
 
                 # -----------------------------------------------------------------------------
                 # Issue a vol status then use the output to look for active tasks and self heal
@@ -598,10 +600,10 @@ class Cluster(object):
 
                                 if not uuid:
                                     # tried to resolve the name but couldn't
-                                    print ("Cluster.updateState : Attempting to use a 'path' (%s) for "
-                                           "a self heal daemon that" % node_name)
-                                    print "does not correspond to a peer node, and can not continue\n"
-                                    exit(16)
+                                    s = "Attempting to use a 'path' ("  + node_name  + ") for "
+                                    s += "a self heal daemon that"
+                                    s += "does not correspond to a peer node, and can not continue\n"
+                                    raise GlusterNotPeerNode(s)
 
                                 if self.node[uuid].self_heal_enabled:
 
