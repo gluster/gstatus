@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# File: check_glusterfs
+# Author: Mark Ebbers <mark.ebbers@nedap.com>
+# Date: 2018-06-14
+#
+# Reports when there is a problem with GlusterFS volume(s)
+#
+## Requirements
+#
+# * GlusterFS => 3.4
+# * Gstatus.py <https://github.com/gluster/gstatus>
+# * Sudo privileges
+#
+## Changelog
+#
+# * 2019-5-16 - If gstatus fails, retry to minimize false alerts.
+#
+##
+
+set -e
+
+GSTATUSBIN=/usr/local/bin/gstatus
+if [ ! -e "$GSTATUSBIN" ]; then
+  echo "WARNING - GlusterFS gstatus not installed"
+  exit 1
+fi
+
+for i in $(seq 1 5)
+do
+    gstatus=`$GSTATUSBIN -o keyvalue | grep -o 'status=[^,]*' | cut -d"=" -f2 | tr -d \'\"`
+    if [ "$gstatus" = "healthy" ]; then
+        echo "OK - GlusterFS healthy"
+        exit 0
+    fi
+    sleep 3
+done
+
+echo "CRITICAL - GlusterFS unhealthy"
+exit 2
