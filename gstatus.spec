@@ -68,6 +68,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Tue Dec 3 2019 Sachidananda Urs <surs@redhat.com> 0.66-1
+- Remove the gluster version check.
+- gstatus should work for all versions >= 3.12
+
 * Sat Aug 29 2015 Sachidananda Urs <surs@redhat.com> 0.65-1
 - Fixed bugs: 1250453, 1254432, 1254505, 1254514, 1254866, 1257092, 1257097
 - Removed RPMs from the repository

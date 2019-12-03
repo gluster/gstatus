@@ -234,9 +234,15 @@ if __name__ == '__main__':
 
     cluster.output_mode = options.output_mode
 
-    if version_ok(cluster.glfs_version, cfg.min_version):
+    # Disable the buggy version check, version check was done to figure if the
+    # glusterfs version used supported snapshot. Current users are expected to
+    # already have upgraded to a `snapshot supported' versions.
+    # Most of the recent issues are due to version check than other usability
+    # issues. GlusterFS below 3.12 are not supported anyway. 3.12 or above
+    # include snapshot support
 
-        main()
+    # if version_ok(cluster.glfs_version, cfg.min_version):
+    main()
 
     else:
 
