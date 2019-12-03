@@ -111,7 +111,7 @@ class Volume(object):
         """
 
         if cfg.debug:
-            print "Volume 'update'. Processing volume %s" % self.name
+            print("Volume 'update'. Processing volume %s" % self.name)
 
         node_elements = volume_xml.findall('.//node')
         # print "DEBUG --> this volume xml has %d node elements"%(len(node_elements))
@@ -287,7 +287,7 @@ class Volume(object):
                     (node, path_name) = line.replace(':', ' ').split()[1:]
 
                     if cfg.debug:
-                        print "updateSelfHeal. self heal cmd gave a node name of %s" % node
+                        print("updateSelfHeal. self heal cmd gave a node name of %s" % node)
 
                     # 3.4.0.59 added trailing '/' to brick path,so remove it!
                     brick_path = node + ":" + path_name.rstrip('/')
@@ -300,7 +300,7 @@ class Volume(object):
 
                         self.brick[brick_path].heal_count = heal_count
                         if cfg.debug:
-                            print "updateSelfHeal. brick path from self heal matched brick object successfully"
+                            print("updateSelfHeal. brick path from self heal matched brick object successfully")
 
                     except KeyError:
 
@@ -328,7 +328,7 @@ class Volume(object):
                                 break
 
                         if cfg.debug:
-                            print "updateSelfHeal. using brick path match of %s" % brick_path
+                            print("updateSelfHeal. using brick path match of %s" % brick_path)
 
                     total_heal_count += heal_count
 
@@ -375,21 +375,21 @@ class Volume(object):
         supported_volume_types = ['Replicate', 'Distribute', 'Distributed-Replicate', 'Disperse', 'Distributed-Disperse']
 
         if self.typeStr not in supported_volume_types:
-            print "\tDisplay of this volume type has yet to be implemented"
+            print("\tDisplay of this volume type has yet to be implemented")
             return
 
-        print "\t%s %s" % (self.name.ljust(16, '-'), '+')
-        print "\t" + " " * 17 + "|"
+        print("\t%s %s" % (self.name.ljust(16, '-'), '+'))
+        print("\t" + " " * 17 + "|")
         offset = 16
 
         if self.typeStr.startswith('Dist'):
-            print " " * offset + "Distribute (dht)"
+            print(" " * offset + "Distribute (dht)")
             offset = 25
         elif self.typeStr.startswith('Disp'):
-            print " " * offset + "Disperse (ida)"
+            print(" " * offset + "Disperse (ida)")
             offset = 25
         else:
-            print " " * offset + "Replicated (afr)"
+            print(" " * offset + "Replicated (afr)")
             offset = 25
 
         if (self.replicaCount == 1) and (self.disperseCount == 0):
@@ -419,7 +419,7 @@ class Volume(object):
                     brick_info = self.brick[brick_path].print_brick
                     print (padding + "|\n" + padding + "+--" + brick_info)
                 subvol_id += 1
-        print
+        print()
 
     def client_count(self, vol_stat_clients_xml):
         """ receive volume xml, and parse to determine the total # of

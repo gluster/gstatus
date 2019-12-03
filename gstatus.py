@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 
 from optparse import OptionParser  # command line option parsing
@@ -58,7 +58,7 @@ def console_mode():
 
     # Volume Breakdown
     if volume_request:
-        print "\nVolume Information"
+        print("\nVolume Information")
 
         for vol_name in sorted(cluster.volume):
 
@@ -81,7 +81,7 @@ def console_mode():
                           display_bytes(vol.usable_capacity, display_units)))
 
                 if cluster.snapshot_capable:
-                    print "\t" + " " * 17 + "Snapshots: %d" % vol.snapshot_count
+                    print("\t" + " " * 17 + "Snapshots: %d" % vol.snapshot_count)
 
                 print ("\t" + " " * 17 + "Self Heal: %s" % vol.self_heal_string)
                 print ("\t" + " " * 17 + "Tasks Active: %s" % task_list_str)
@@ -95,24 +95,23 @@ def console_mode():
                           vol.num_connections))
 
                 if volume_layout:
-                    print
+                    print()
                     vol.print_layout()
 
-                print
+                print()
 
     if state_request:
-        print "\nStatus Messages"
+        print("\nStatus Messages")
         if cluster.messages:
 
             # Add the current cluster state as the first message to display
             cluster.messages.insert(0, "Cluster is %s" % cluster.status.upper())
             for info in cluster.messages:
-                print "  - " + info
+                print("  - " + info)
 
         else:
-            print "  - Cluster is HEALTHY, all_bricks checks successful"
-
-    print
+            print("  - Cluster is HEALTHY, all_bricks checks successful")
+    print()
 
 
 def log_mode():
@@ -120,32 +119,32 @@ def log_mode():
         or splunk et al """
 
     now = datetime.now()
-    print "%s %s" % (now, str(cluster))
+    print("%s %s" % (now, str(cluster)))
 
 
 def main():
     if cluster.output_mode == 'console':
         # add some spacing to make the output stand out more
-        print " "
+        print(" ")
 
         # setup up the cluster object structure
     try:
         cluster.initialise()
-    except [GlusterEmptyPool, GlusterNoPeerStatus] as e:
-        print e
-        exit(12)
     except GlusterFailedBrick as e:
-        print e
+        print(e)
         exit(16)
+    except:
+        print(e)
+        exit(12)
 
     # run additional commands to get current state
     try:
         cluster.update_state(self_heal_backlog, client_status)
     except [GlusterFailedVolume, GlusterNotPeerNode] as e:
-        print e
+        print(e)
         exit(16)
     except GlusterAnotherTransaction as e:
-        print e
+        print(e)
         exit(42)
 
     # use the bricks to determine overall cluster disk capacity
@@ -244,7 +243,7 @@ if __name__ == '__main__':
     # if version_ok(cluster.glfs_version, cfg.min_version):
     main()
 
-    else:
+    # else:
 
-        print "gstatus is not compatible with this version of glusterfs %s" % cluster.glfs_version
-        exit(16)
+    #     print("gstatus is not compatible with this version of glusterfs %s" % cluster.glfs_version)
+    #     exit(16)

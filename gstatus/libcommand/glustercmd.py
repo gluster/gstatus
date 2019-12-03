@@ -106,8 +106,8 @@ class GlusterCommand(object):
                                                preexec_fn=os.setsid)
 
             stdout, stderr = self.cmdProcess.communicate()
-            self.stdout = stdout.split('\n')[:-1]
-            self.stderr = stderr.split('\n')[:-1]
+            self.stdout = str(stdout).split('\n')[:-1]
+            self.stderr = str(stderr).split('\n')[:-1]
 
         # use cfg.CMD_TIMEOUT value, to wait till user specified timeout.
         self.timeout = cfg.CMD_TIMEOUT

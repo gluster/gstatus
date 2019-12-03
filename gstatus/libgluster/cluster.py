@@ -77,7 +77,7 @@ class Cluster(object):
         self.product_name = ''  # Product identifier, RHS release info or
         self.product_shortname = ''  # Community
 
-        self.get_version()
+        # self.get_version()
         self.nodes_down = 0
 
         self.ip_list = []  # list of IP's from all nodes
@@ -183,8 +183,8 @@ class Cluster(object):
                 # Clean up all the empty strings in the list
                 self.alias_stripped = [ele for ele in alias_list if ele != '']
 
-                print "Creating a node object with uuid %s, with names of %s"%\
-                    (node_info['uuid'], self.alias_stripped)
+                print("Creating a node object with uuid %s, with names of %s"%\
+                    (node_info['uuid'], self.alias_stripped))
             # ------------------------------------------------------------------
 
             new_node = Node(node_info['uuid'], node_info['connected'],
@@ -231,7 +231,7 @@ class Cluster(object):
             self.volume[new_volume.name] = new_volume
 
             if cfg.debug:
-                print "defineVolumes. Adding volume %s" % new_volume.name
+                print("defineVolumes. Adding volume %s" % new_volume.name)
 
             # add information about any volume options
             opt_nodes = vol_object.findall('.//option')
@@ -268,8 +268,8 @@ class Cluster(object):
                 (hostname, pathname) = brick_path.split(':')
 
                 if cfg.debug:
-                    print "defineVolumes. Adding brick %s to %s" % (brick_path,
-                                                                    new_volume.name)
+                    print("defineVolumes. Adding brick %s to %s" % (brick_path,
+                                                                    new_volume.name))
 
                 node_uuid = self.get_node(hostname)
 
@@ -363,7 +363,7 @@ class Cluster(object):
                         snap_name = snap.strip()
 
                         if cfg.debug:
-                            print "defineSnapshots. Creating a snapshot instance for volume '%s' called '%s'" % (volume_name, snap_name)
+                            print("defineSnapshots. Creating a snapshot instance for volume '%s' called '%s'" % (volume_name, snap_name))
 
                         new_snapshot = Snapshot(snap_name, this_volume, volume_name)
                         this_volume.snapshot_list.append(new_snapshot)
@@ -371,7 +371,7 @@ class Cluster(object):
                     this_volume.snapshot_count = len(this_volume.snapshot_list)
 
             if cfg.debug:
-                print "defineSnapshots. Volume '%s' has %d snapshots" % (volume_name, this_volume.snapshot_count)
+                print("defineSnapshots. Volume '%s' has %d snapshots" % (volume_name, this_volume.snapshot_count))
 
     def get_version(self):
         """ Sets the current version and product identifier for this cluster """
@@ -731,8 +731,8 @@ class Cluster(object):
         if cmd.rc > 0:
             # unable to get the client connectivity information
             if self.output_mode == 'console' and not cfg.no_progress_msgs:
-                print "\ngstatus has been unable to get the output of a 'vol status all clients --xml' command"
-                print "and can not continue.\n"
+                print("\ngstatus has been unable to get the output of a 'vol status all clients --xml' command")
+                print("and can not continue.\n")
             return
 
         # At this point the command worked, so we can process the results
@@ -740,7 +740,7 @@ class Cluster(object):
         try:
             xml_root = ETree.fromstring(xml_string)
         except ExpatError:
-            print "Malformed xml, try again later."
+            print("Malformed xml, try again later.")
 
         volumes = xml_root.findall('.//volume')
 
