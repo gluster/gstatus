@@ -244,7 +244,7 @@ if __name__ == '__main__':
     # if version_ok(cluster.glfs_version, cfg.min_version):
     main()
 
-    else:
+    # else:
 
-        print "gstatus is not compatible with this version of glusterfs %s" % cluster.glfs_version
-        exit(16)
+    #     print "gstatus is not compatible with this version of glusterfs %s" % cluster.glfs_version
+    #     exit(16)
