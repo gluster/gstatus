@@ -95,7 +95,7 @@ class GlusterCommand(object):
         def command_thread():
             """ invoke subprocess to run the command """
 
-            if GlusterCommand.targetNode is not "localhost":
+            if GlusterCommand.targetNode != "localhost":
                 self.cmd += " --remote-host=%s" % GlusterCommand.targetNode
 
             self.cmdProcess = subprocess.Popen(self.cmd,

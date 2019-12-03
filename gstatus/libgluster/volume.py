@@ -85,7 +85,7 @@ class Volume(object):
 
         node_info = {}
         for brick_info in brick_xml.getchildren():
-            # print "DEBUG setting " + brick_info.tag + " to " + brick_info.text
+            # print("DEBUG setting " + brick_info.tag + " to " + brick_info.text)
             node_info[brick_info.tag] = brick_info.text
 
         brick_path = node_info['hostname'] + ":" + node_info['path']
@@ -111,10 +111,10 @@ class Volume(object):
         """
 
         if cfg.debug:
-            print "Volume 'update'. Processing volume %s" % self.name
+            print("Volume 'update'. Processing volume %s" % self.name)
 
         node_elements = volume_xml.findall('.//node')
-        # print "DEBUG --> this volume xml has %d node elements"%(len(node_elements))
+        # print("DEBUG --> this volume xml has %d node elements"%(len(node_elements)))
 
         for node in node_elements:
             sub_element_count = len(node.getchildren())
@@ -124,7 +124,7 @@ class Volume(object):
             # Version 3.4 ... 11 sub elements of <node>
             # Version 3.5 ... 12 sub elements of <node> 3.5 adds a 'peerid' child element
             if sub_element_count >= 11:
-                # print "DEBUG --> Updating a brick"
+                # print("DEBUG --> Updating a brick")
                 self.brick_update(node)
             else:
                 # Skipping this node element since it doesn't have child elements
@@ -287,7 +287,7 @@ class Volume(object):
                     (node, path_name) = line.replace(':', ' ').split()[1:]
 
                     if cfg.debug:
-                        print "updateSelfHeal. self heal cmd gave a node name of %s" % node
+                        print("updateSelfHeal. self heal cmd gave a node name of %s" % node)
 
                     # 3.4.0.59 added trailing '/' to brick path,so remove it!
                     brick_path = node + ":" + path_name.rstrip('/')
@@ -300,13 +300,13 @@ class Volume(object):
 
                         self.brick[brick_path].heal_count = heal_count
                         if cfg.debug:
-                            print "updateSelfHeal. brick path from self heal matched brick object successfully"
+                            print("updateSelfHeal. brick path from self heal matched brick object successfully")
 
                     except KeyError:
 
                         if cfg.debug:
-                            print ("updateSelfHeal. brick path from self heal != any brick object, "
-                                   "processing nodes to locate the brick")
+                            print("updateSelfHeal. brick path from self heal != any brick object, "
+                                  "processing nodes to locate the brick")
 
                         # cycle though the nodes associated with this volume
                         match_found = False
@@ -328,7 +328,7 @@ class Volume(object):
                                 break
 
                         if cfg.debug:
-                            print "updateSelfHeal. using brick path match of %s" % brick_path
+                            print("updateSelfHeal. using brick path match of %s" % brick_path)
 
                     total_heal_count += heal_count
 
@@ -341,7 +341,7 @@ class Volume(object):
         else:
             # vol heal command failed - just flag the problem
             if cfg.debug:
-                print ("Volume updateSelfHeal. Query for self heal details timed out - "
+                print("Volume updateSelfHeal. Query for self heal details timed out - "
                        "maybe run again with a larger -t value?")
             self.self_heal_string += " HEAL DATA UNAVAILABLE"
 
@@ -375,21 +375,21 @@ class Volume(object):
         supported_volume_types = ['Replicate', 'Distribute', 'Distributed-Replicate', 'Disperse', 'Distributed-Disperse']
 
         if self.typeStr not in supported_volume_types:
-            print "\tDisplay of this volume type has yet to be implemented"
+            print("\tDisplay of this volume type has yet to be implemented")
             return
 
-        print "\t%s %s" % (self.name.ljust(16, '-'), '+')
-        print "\t" + " " * 17 + "|"
+        print("\t%s %s" % (self.name.ljust(16, '-'), '+'))
+        print("\t" + " " * 17 + "|")
         offset = 16
 
         if self.typeStr.startswith('Dist'):
-            print " " * offset + "Distribute (dht)"
+            print(" " * offset + "Distribute (dht)")
             offset = 25
         elif self.typeStr.startswith('Disp'):
-            print " " * offset + "Disperse (ida)"
+            print(" " * offset + "Disperse (ida)")
             offset = 25
         else:
-            print " " * offset + "Replicated (afr)"
+            print(" " * offset + "Replicated (afr)")
             offset = 25
 
         if (self.replicaCount == 1) and (self.disperseCount == 0):
@@ -397,7 +397,7 @@ class Volume(object):
             # Distributed layout
             for brick_name in self.brick_order:
                 brick_info = self.brick[brick_name].print_brick
-                print (" " * offset + "|\n" + " " * offset + "+--" + brick_info)
+                print(" " * offset + "|\n" + " " * offset + "+--" + brick_info)
 
         else:
 
@@ -412,14 +412,14 @@ class Volume(object):
                 if subvol_id == (num_subvols - 1):
                     link_char = " "
 
-                print (" " * offset + "|\n" + " " * offset + "+-- %s" % subvol_type_text
+                print(" " * offset + "|\n" + " " * offset + "+-- %s" % subvol_type_text
                        + str(subvol_id) + " (%s)" % subvol_xlator)
                 padding = " " * offset + link_char + "     "
                 for brick_path in subvol:
                     brick_info = self.brick[brick_path].print_brick
-                    print (padding + "|\n" + padding + "+--" + brick_info)
+                    print(padding + "|\n" + padding + "+--" + brick_info)
                 subvol_id += 1
-        print
+        print()
 
     def client_count(self, vol_stat_clients_xml):
         """ receive volume xml, and parse to determine the total # of
