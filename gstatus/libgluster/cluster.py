@@ -36,7 +36,10 @@ class Cluster(object):
         self.volume_count = 0
         self.brick_count = 0
         self.snapshot_count = 0
-        self.snapshot_capable = False
+        # When the buggy version_check is fixed set to false and check.
+        # For now assume snapshot is supported. We don't support below 3.12
+        # anyway.
+        self.snapshot_capable = True
 
         self.sh_enabled = 0  # sh = self heal
 
@@ -98,7 +101,8 @@ class Cluster(object):
             # if this cluster supports snapshots, take a look to see if
             # there are any
 
-            self.snapshot_capable = version_ok(self.glfs_version, cfg.snapshot_support)
+            # For now snapshot_capable is set to True, till the version_check is fixed.
+            # self.snapshot_capable = version_ok(self.glfs_version, cfg.snapshot_support)
 
             if self.snapshot_capable:
                 self.define_snapshots()
