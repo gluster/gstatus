@@ -103,11 +103,13 @@ class GlusterCommand(object):
                                                stdout=subprocess.PIPE,
                                                stderr=subprocess.PIPE,
                                                env=self.env,
-                                               preexec_fn=os.setsid)
+                                               preexec_fn=os.setsid,
+                                               universal_newlines=True
+                                               )
 
             stdout, stderr = self.cmdProcess.communicate()
-            self.stdout = stdout.decode('utf-8').split('\n')[:-1]
-            self.stderr = stderr.decode('utf-8').split('\n')[:-1]
+            self.stdout = stdout.split('\n')[:-1]
+            self.stderr = stderr.split('\n')[:-1]
 
         # use cfg.CMD_TIMEOUT value, to wait till user specified timeout.
         self.timeout = cfg.CMD_TIMEOUT
