@@ -103,7 +103,9 @@ class GlusterCommand(object):
                                                stdout=subprocess.PIPE,
                                                stderr=subprocess.PIPE,
                                                env=self.env,
-                                               preexec_fn=os.setsid)
+                                               preexec_fn=os.setsid,
+                                               universal_newlines=True
+                                               )
 
             stdout, stderr = self.cmdProcess.communicate()
             self.stdout = stdout.split('\n')[:-1]

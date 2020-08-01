@@ -121,15 +121,15 @@ def get_ipv4_addr():
 
     sck = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    names = array.array('B', '\0' * __bytes)
+    names = array.array('B', bytearray('\0' * __bytes, 'utf-8'))
     outbytes = struct.unpack('iL', fcntl.ioctl(
         sck.fileno(),
         SIOCGIFCONF,
         struct.pack('iL', __bytes, names.buffer_info()[0])))[0]
 
-    namestr = names.tostring()
+    namestr = names.tobytes()
 
-    if_list = [(namestr[i:i + 16].split('\0', 1)[0],
+    if_list = [(namestr[i:i + 16].decode('utf-8').split('\0', 1)[0],
                 socket.inet_ntoa(namestr[i + 20:i + 24]))
                for i in range(0, outbytes, struct_size)]
 

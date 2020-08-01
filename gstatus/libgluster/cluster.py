@@ -679,7 +679,7 @@ class Cluster(object):
         data = {}
         data_string = ''
 
-        for key, value in sorted(vars(self).iteritems()):
+        for key, value in sorted(vars(self).items()):
 
             if key in Cluster.attr_list:
 
