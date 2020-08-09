@@ -19,12 +19,12 @@ class strip_py_ext(distutils.command.install_scripts.install_scripts):
 
 setup(
     name = "gstatus",
-    version= "0.66",
-    description= "Show the current health of the components in a glusterfs Trusted Storage Pool",
+    version= "1.0",
+    description= "Show the health of the components in a glusterfs Trusted Storage Pool",
     long_description = long_description,
     author = "Paul Cuzner",
     author_email = "pcuzner@redhat.com",
-    url = "https://github.com/pcuzner/gstatus",
+    url = "https://github.com/gluster/gstatus",
     license = "GPLv3",
     packages = [
         "gstatus",

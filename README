@@ -1,205 +1,134 @@
-                               GSTATUS
+                               gstatus
                                =======
 
 Overview
 ========
-A gluster trusted pool (aka cluster), consists of several key components; 
-nodes, volumes and bricks. In glusterfs 3.4/3.5, there isn't a single command
-that can provide an overview of the cluster's health. This means that admins
-currently assess the cluster health by looking at several commands to piece
-together a picture of the cluster's state.
+gstatus is a commandline utility to report the health and other statistics
+related to a GlusterFS cluster. gstatus consolidates the volume, brick, and peer
+information of a GlusterFS cluster.
+
+At volume level, gstatus reports detailed infromation on quota usage, snapshots,
+self-heal and rebalance status.
+
+Motivation
+==========
+A gluster trusted storage pool (aka cluster), consists of several key
+components viz. nodes, volumes, and bricks. In glusterfs, there isn't a single
+command that can provide an overview of the cluster's health. This means that
+administrators currently assess the cluster health by looking at several
+commands to piece together a picture of the cluster's state.
 
 This isn't ideal - so 'gstatus' is an attempt to provide an easy to use,
-highlevel view of a cluster's health through a single command. The tool gathers
-information by issuing gluster commands, to build an object model covering
-Nodes, Volumes and Bricks. With this data in place, checks are performed across
-this meta data and errors reported back to the user. In later releases, this
-data could be analysed in different ways to add further checks, incorporating
-deployment best practices, freespace triggers etc.
-
-Pre-Requisites
-==============
-+ glusterfs 3.4 or above
-  The tool issues commands to gluster using the --xml parameter. Scraping the
-  output is another possibility, but by using the xml option, the program 
-  should be more stable and more easily extendable
-  
-+ volume types
-  the initial release of gstatus supports distributed and 
-  distributed-replicated volumes ONLY
-
+reliable, highlevel view of a cluster's health through a single command. The
+tool gathers information by calling the glustercli library
+(https://github.com/gluster/glustercli-python) and displays on the screen.
 
 Dependencies
 ============
-- python 2.6 or above
+- python 3.0 or above
+- gluster version 3.12 or above
 - gluster CLI
-- gluster version 3.4 or above
+- glustercli-python (https://github.com/gluster/glustercli-python)
 
 
-Installation
-============
-Installing the tool can be done in two ways, through python-seuptools or simply
-by running the main script (gstatus.py) directly.
+Installating from source
+========================
+* Installing glustercli-python
+  - git clone https://github.com/gluster/glustercli-python.git
+  - cd glustercli-python
+  - python3 setup.py install
+
+Installing the gstatus tool can be done in two ways, through python-seuptools or
+simply by running the main script (gstatus.py) directly.
 
 * Using python-setuptools
-1. To install using this method extract the archive file
-   - tar xvzf gstatus.tar.gz
-2. cd to the gstatus directory
-3. run the setup.py program
-   - python setup.py install
-4. invoke the script
-   gstatus <options>
-
-This will install a hook for gstatus in /usr/bin so running the script doesn't
-need the .py extension.
-
-* running from the archive
-1. Extract the archive file
-   - tar xvzf gstatus.tar.gz
-2. cd to the gstatus directory
-3. invoke the script using
-   ./gstatus.py <options>
-
-Upgrade Notes
-=============
-1. If you're upgrading via rpm, first remove the existing version and then install
-the new one
-
-
-Volume States
-=============
-A gluster volume is made from individual filesystems (gluster bricks) across 
-multiple nodes. From an end/user of application perspective, this complexity
-is abstracted but the status of individual bricks does have a bearing on the
-data availability of the volume. For example, even without replication the
-loss of a single brick in the volume will not cause the volume itself to be
-unavilable, but instead manifest as inaccessible files in the filesystem.
- 
-To help understand the impact a brick or node outage can have on data access,
-gstatus introduces some additional volume status descriptions.
-
-UP
-Volume is started and available, all bricks are up
-
-UP(Degraded)
-This state is specific to replicated volumes, where at least one brick is down
-within a replica set. Data is still 100% available due to the alternate
-replica(s),  but the resilience of the volume to further failures within the
-same replica set flags this volume as 'degraded'. 
-
-UP(Partial)
-Effectively this means that allthough some bricks in the volume are online, 
-there are others that are down to a point where areas of the filesystem will be
-missing. For a distrubuted volume, this state is seen if ANY brick is down, 
-whereas for a replicated volume a complete replica set needs to be down before
-the volume state transitions to PARTIAL. 
-
-DOWN
-Bricks are down, or the volume has not yet been started 
+  - git clone https://github.com/gluster/gstatus.git
+  - cd gstatus
+  - python setup.py install
 
 
 Running the tool
 ================
 
-Running gstatus with a -h flag shows the following options;
+NOTE: The tool has to be run as root or sudo <cmd>. This requirement is
+      imposed by gluster than gstatus. Since gstatus internally calls the
+      gluster command, running as superuser is a necessity.
 
-[root@gfs-ec1 gstatus]# ./gstatus.py -h
+root@master-node:~# ./gstatus.py -h
 Usage: gstatus.py [options]
 
 Options:
   --version             show program's version number and exit
   -h, --help            show this help message and exit
-  -s, --state           show highlevel health of the cluster
   -v, --volume          volume info (default is ALL, or supply a volume name)
-  -b, --backlog         Look deeper at self heal state
-  -a, --all             show all cluster information (-s with -v)
+  -a, --all             Print all available details on volumes
+  -b, --bricks          Print the list of bricks
+  -q, --quota           Print the quota information
+  -s, --snapshots       Print the snapshot information
   -u UNITS, --units=UNITS
-                        display capacity units in DECimal or BINary format (GB
-                        vs GiB)
-  -l, --layout          show brick layout when used with -v, or -a
-  -o OUTPUT_MODE, --output-mode=OUTPUT_MODE
-                        produce output in different formats - json, keyvalue
-                        or console(default)
-  -D, --debug           turn on debug mode
-  -w, --without-progress
-                        turn off progress updates to user during data
-                        gathering
-  -t TIMEOUT, --timeout=TIMEOUT
-                        gluster command timeout value (secs)
+                        display storage size in given units
+root@master-node:~#
+
+Listing Volumes
+---------------
+
+By default gstatus prints an overview of all the volumes available in the
+cluster. However, user can filter the volumes by specifying -v <volname>, more
+than one volume can be specified by repeated invocation of -v. Or a regular
+expression can be provided with -v option. For example:
+
+gstatus -v '.*perf'
+
+Ensure to use single quotes around the pattern, else shell file globbing will
+include unnecessary input. The above pattern fetches all the volumes whose name
+ends with perf. Any standard regular expression can be provided.
+
+User can request more detailed volume information by providing the -a
+option. Other volume options include -b, -q, -s which provides brick, quota, and
+snapshot details respectively.
+
+Quota
+-----
+
+By default gstatus reports `Quota: on' if quota is set. With options -a or -q
+the list of all quota entries, size, and usage is reported.
 
 
+Understanding the output
+========================
 
-* Understanding the output
+gstatus output is made up of two parts:
 
-- Simply invoking gstatus without any options, will give a 3 line summary of
-  the cluster. This will tell you overall health, capacity and gluster version.
-  If there are issues detected in the cluster, the UNHEALTHY state will be 
-  suffixed by a number in brackets - the number denotes the number of errors
-  detected within the cluster.
+a. Cluster infromation.
+b. Volume information.
 
-- Using -a will show high level cluster elements, as well as volume information
-  You'll notice  that there are a number of what appear to be fractions listed
-  against items like Nodes, Bricks etc.
+(There will be more as we add self-heal, rebalance, geo-replication ...)
 
-  These fractions actually show you the current 'up' state against the 
-  potential up state. So a 'Node' field that shows 2/4, actually means the
-  cluster has 4 nodes, but only 2 are in an up state.
+a. Cluster information
 
-  e.g.
-[root@rhs1-1 gstatus-tests]# gstatus
-   
-      Status: HEALTHY           Capacity: 32.00 GiB(raw bricks)
-   Glusterfs: 3.4.0.59rhs                 10.00 GiB(raw used)
-  OverCommit: Yes                         48.00 GiB(usable from volumes)
+Cluster information provides the health of the cluster and reports the number of
+nodes reachable, the number of volumes in the cluster and the number of volumes
+which are up.
 
-[root@rhs1-1 gstatus-tests]# gstatus -a
- 
-      Status: HEALTHY           Capacity: 32.00 GiB(raw bricks)
-   Glusterfs: 3.4.0.59rhs                 10.00 GiB(raw used)
-  OverCommit: Yes                         48.00 GiB(usable from volumes)
+b. Volume Information
 
-   Nodes    :  5/ 5		Volumes:  2 Up
-   Self Heal:  5/ 4		          0 Up(Degraded)
-   Bricks   :  8/ 8		          0 Up(Partial)
-   Clients  :     5               0 Down
+There are three columns in the volume section namely volume name, volume type
+(Replicate, Distribute, Distributed-Disperse, Disperse), and additional volume
+related information. The third column provides wealth of volume information
+which includes:
 
-<snip>
-
-- Capacity information is derived from the brick information taken from a 
-  'vol status detail' command. The accuracy of this number therefore depends
-  on the nodes/bricks being all up - elements missing from the configuration
-  will simply be missing from the calculation.
-
-- A 'flag' called 'OverCommit' is provided that indicates whether a brick is
-  used by multiple volumes. Although technically valid, this exposes the 
-  user to capacity conflicts across different volumes when quota's are not used.
-
-- running the tool with the -l flag (with -a, or -v) will show a line diagram
-  depicting the brick layout within the volume. This feature was is inspired 
-  by work of Fred van Zwieten and Niels De Vos in the 'lsgvt' project.
-
-TIP: To keep the tool responsive, gstatus will not perform a vol heal <vol> info
-command - since this can take time. However, if you suspect self heal is active
-you can use the -b setting to check for a backlog of file heal operations.
-
-
-The examples directory included in the archive contains a number of scenarios
-that show the behaviour of the script under different error conditions.
-
- 
-Tested on
-=========
-- 4 node vm cluster, running Red Hat Storage 2.1 (RHEL 6.4, glusterfs 3.4)
-- 4 node vm cluster, based on RHEL 6.5 with upstream glusterfs 3.5 beta 3
-- 6 node vm cluster, based on CentOS 7.1, glusterfs 3.7 beta2
-
-
-Known Issues
-============
-
-1) Normally every node will be capacity nodes. However, when nodes are added to
-   the cluster for quorum purposes, the Self Heal field shows more nodes with Self 
-   Heal active than needed. This is due to the arbitration nodes also running the 
-   self head daemon.
-
- 
+1. Status - (Started/Stopped)
+2. Health (Displayed only when volume is started):
+          i) UP       - All bricks are up and volume is healthy.
+         ii) DOWN     - All bricks are down (needs immediate attention).
+        iii) PARTIAL  - Only some of the bricks are up. (volume is functional).
+         iv) DEGRADED - Some of the sub-volumes are down. (In case of distribute
+                        data might not be accessible)
+3. Capacity  - Volume capacity. Displayed units can be controlled by -u switch.
+4. Snapshots - By default only snapshot count is shown. Detailed information can
+               be viewed by using -s or -a switch to gstatus.
+5. Bricks    - Brick list is not shown by default. Can be viewed by using -b or -a
+               switch.
+6. Quota     - List of directories on which quota is set can be viewed by
+               running gstatus with -q or -a switch. By default just the quota
+               status is shown which is on/off.
