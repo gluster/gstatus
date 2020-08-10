@@ -24,7 +24,7 @@ release: gen-version
 	@rm -rf build
 	@mkdir -p build/src
 	@cp -r gstatus/* build/src/
-	@${PYTHON} -m pip install -r requirements.txt --target build/src
+	@${PYTHON} -m pip install --system -r requirements.txt --target build/src
 	@cd build/src && zip -r ../${PROGNAME}.zip *
 	@echo '#!/usr/bin/env ${PYTHON}' | cat - build/${PROGNAME}.zip > build/${PROGNAME}
 	@chmod +x build/${PROGNAME}
