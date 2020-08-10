@@ -28,8 +28,24 @@ Dependencies
 - python 3.0 or above
 - gluster version 3.12 or above
 - gluster CLI
-- glustercli-python (https://github.com/gluster/glustercli-python)
 
+Install
+=======
+Download the latest release with the command
+
+curl -LO https://github.com/gluster/gstatus/releases/download/1.0.0/gstatus
+
+Make the gstatus binary executable.
+
+chmod +x ./gstatus
+
+Move the binary in to your PATH.
+
+sudo mv ./gstatus /usr/local/bin/gstatus
+
+Test to ensure the version you installed is up-to-date
+
+gstatus --version
 
 Installating from source
 ========================
@@ -54,8 +70,8 @@ NOTE: The tool has to be run as root or sudo <cmd>. This requirement is
       imposed by gluster than gstatus. Since gstatus internally calls the
       gluster command, running as superuser is a necessity.
 
-root@master-node:~# ./gstatus.py -h
-Usage: gstatus.py [options]
+root@master-node:~# gstatus -h
+Usage: gstatus [options]
 
 Options:
   --version             show program's version number and exit

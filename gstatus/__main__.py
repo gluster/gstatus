@@ -6,6 +6,7 @@ from shutil import get_terminal_size
 
 from glusterlib.cluster import Cluster
 from glusterlib.display_status import display_status
+import version as gstatus_version
 
 supported_version = "3.12"
 
@@ -19,7 +20,8 @@ def check_version(cluster):
 def parse_options():
 
     usage = "usage: %prog [options]"
-    parser = OptionParser(usage=usage, version="%prog 1.0")
+    parser = OptionParser(usage=usage,
+                          version="%prog " + gstatus_version.VERSION)
 
     parser.add_option("-v", "--volume", dest="volumes", action="store_true",
                       default=False,

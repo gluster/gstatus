@@ -4,3 +4,5 @@
 *.pyo
 *~
 .idea/*
+build
+gstatus/version.py
