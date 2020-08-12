@@ -4,9 +4,16 @@ from optparse import OptionParser
 from distutils.version import LooseVersion as version
 from shutil import get_terminal_size
 
-from glusterlib.cluster import Cluster
-from glusterlib.display_status import display_status
-import version as gstatus_version
+try:
+    # If imported directly from the same directory
+    from glusterlib.cluster import Cluster
+    from glusterlib.display_status import display_status
+    import version as gstatus_version
+except ImportError:
+    # when installed using setup.py
+    from gstatus.glusterlib.cluster import Cluster
+    from gstatus.glusterlib.display_status import display_status
+    import gstatus.version as gstatus_version
 
 supported_version = "3.12"
 
