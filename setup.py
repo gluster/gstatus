@@ -4,6 +4,8 @@ from setuptools import setup
 import distutils.command.install_scripts
 import shutil
 
+from gstatus import version
+
 f = open('README')
 long_description = f.read().strip()
 f.close()
@@ -19,21 +21,23 @@ class strip_py_ext(distutils.command.install_scripts.install_scripts):
 
 setup(
     name = "gstatus",
-    version= "1.0",
+    version= version.VERSION,
     description= "Show the health of the components in a glusterfs Trusted Storage Pool",
     long_description = long_description,
     author = "Paul Cuzner",
     author_email = "pcuzner@redhat.com",
     url = "https://github.com/gluster/gstatus",
     license = "GPLv3",
+    install_requires=['glustercli'],
     packages = [
         "gstatus",
-        "gstatus.gstatuscfg",
-        "gstatus.libgluster",
-        "gstatus.libcommand",
-        "gstatus.libutils"
+        "gstatus.glusterlib",
         ],
-    scripts = [ "gstatus.py" ],
+    entry_points={
+        "console_scripts": [
+            "gstatus = gstatus.__main__:main",
+        ]
+    },
     cmdclass = {
         "install_scripts" : strip_py_ext
     }

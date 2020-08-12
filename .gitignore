@@ -6,3 +6,5 @@
 .idea/*
 build
 gstatus/version.py
+gstatus.egg-info
+dist
