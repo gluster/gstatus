@@ -54,8 +54,7 @@ Installating from source
   - cd glustercli-python
   - python3 setup.py install
 
-Installing the gstatus tool can be done in two ways, through python-seuptools or
-simply by running the main script (gstatus.py) directly.
+Installing the gstatus tool:
 
 * Using python-setuptools
   - git clone https://github.com/gluster/gstatus.git
