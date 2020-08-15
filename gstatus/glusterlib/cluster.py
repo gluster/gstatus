@@ -20,6 +20,8 @@ class Cluster(object):
         self.brickinfo = options.brickinfo
         self.displayquota = options.displayquota
         self.displaysnap = options.displaysnap
+        self.output_mode = options.output_mode.lower() if options.output_mode\
+                           else 'console'
 
     def gather_data(self):
         try:
