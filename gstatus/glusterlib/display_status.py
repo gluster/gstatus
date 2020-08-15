@@ -4,12 +4,15 @@ import pydoc
 def display_status(data):
     """Print the status of GlusterFS cluster"""
 
-    columns, rows = get_terminal_size((80, 20))
-    status_str = _build_status(data)
-    if status_str.count('\n') > rows:
-        pydoc.pager(status_str)
+    if data.output_mode == 'json':
+        print_json(data)
     else:
-        print(status_str)
+        columns, rows = get_terminal_size((80, 20))
+        status_str = _build_status(data)
+        if status_str.count('\n') > rows:
+            pydoc.pager(status_str)
+        else:
+            print(status_str)
 
 def _build_status(data):
     version = data.glusterfs_version
@@ -111,4 +114,20 @@ Soft-limit(%): {}\n".\
     return(cluster+vols)
 
 
+def print_json(data):
+    import json
+    from datetime import datetime
 
+    # Build the cluster data for json
+    gstatus = {}
+    gstatus['cluster_status']  = data.cluster_status
+    gstatus['glfs_version']    = data.glusterfs_version
+    gstatus['node_count']      = data.nodes
+    gstatus['nodes_active']    = data.nodes_reachable
+    gstatus['volume_count']    = data.volume_count
+    gstatus['volumes_started'] = data.volumes_started
+    if data.volume_count:
+        gstatus['volume_summary'] = data.volume_data
+
+    print(json.dumps({"last_updated": str(datetime.now()),
+                      "data": gstatus}))

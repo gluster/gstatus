@@ -51,6 +51,9 @@ def parse_options():
     parser.add_option("-u", "--units", dest="units",
                       choices=['h', 'k', 'm', 'g', 't', 'p'],
                       help="display storage size in given units")
+    parser.add_option("-o", "--output-mode", dest="output_mode",
+                      help="Output mode, only json is supported currently. "
+                      "Default is to print to console.")
     return(parser.parse_args())
 
 
