@@ -33,7 +33,7 @@ Install
 =======
 Download the latest release with the command
 
-curl -LO https://github.com/gluster/gstatus/releases/download/v1.0.0/gstatus
+curl -LO https://github.com/gluster/gstatus/releases/download/v1.0.1/gstatus
 
 Make the gstatus binary executable.
 
@@ -59,7 +59,7 @@ Installing the gstatus tool:
 * Using python-setuptools
   - git clone https://github.com/gluster/gstatus.git
   - cd gstatus
-  - VERSION=1.0.0 make gen-version
+  - VERSION=1.0.1 make gen-version
   - python3 setup.py install
 
 
@@ -83,6 +83,9 @@ Options:
   -s, --snapshots       Print the snapshot information
   -u UNITS, --units=UNITS
                         display storage size in given units
+  -o OUTPUT_MODE, --output-mode=OUTPUT_MODE
+                        Output mode, only json is supported currently. Default
+                        is to print to console.
 root@master-node:~#
 
 Listing Volumes
@@ -148,3 +151,10 @@ which includes:
 6. Quota     - List of directories on which quota is set can be viewed by
                running gstatus with -q or -a switch. By default just the quota
                status is shown which is on/off.
+
+Output formats
+==============
+By default output is displayed on screen in a pretty printed format.
+Alternatively, user can generate JSON output by passing -o json to gstatus
+command.
+
