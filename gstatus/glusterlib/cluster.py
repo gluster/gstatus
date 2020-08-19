@@ -1,6 +1,7 @@
 import re
 
-from glustercli.cli import peer, quota, volume, snapshot, glusterfs_version
+from glustercli.cli import peer, quota, volume, snapshot, glusterfs_version, \
+    heal
 from glustercli.cli.utils import GlusterCmdException
 
 class Cluster(object):
@@ -58,6 +59,9 @@ class Cluster(object):
         # Snapshots
         if self.detail or self.displaysnap:
             self._update_snapshot_info()
+
+        # Self-heal information, if any.
+        self._update_heal_info()
 
     def _update_volume_sizes(self):
         """Update the volume information"""
@@ -167,4 +171,8 @@ class Cluster(object):
         for volume in self.volume_data:
             if volume['snapshot_count'] > 0:
                 volume['snapshots'] = snapshot.info(volname = volume['name'])
+
+    def _update_heal_info(self):
+        for volume in self.volume_data:
+            volume['healinfo'] = heal.info(volume['name'])
 
