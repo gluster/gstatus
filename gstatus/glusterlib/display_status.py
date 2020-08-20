@@ -56,16 +56,15 @@ def _build_status(data):
                                 v['v_size'])
 
                     # Self-heal information (if any)
-                    heal_header = heal_i = ''
+                    heal_i = ''
                     for heal_data in v['healinfo']:
                         entries = 0 if heal_data['nr_entries'] == '-' else \
                                   heal_data['nr_entries']
                         if int(entries) > 0:
-                            heal_header = "{:>53} Self-Heal:\n".format(' ')
                             heal_i += "{:>56} {:>} ({:>} File(s) to heal).\n".\
-                                         format(' ', heal_data['name'], entries)
-                    if heal_header:
-                        vols += heal_header
+                                      format(' ', heal_data['name'], entries)
+                    if heal_i:
+                        vols += "{:>53} Self-Heal:\n".format(' ')
                         vols += heal_i
 
                     # Snapshot information
