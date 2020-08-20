@@ -54,10 +54,23 @@ def _build_status(data):
                                 v['v_used_percent'],
                                 v['v_size_used'],
                                 v['v_size'])
-                    if v['snapshot_count'] > 0:
-                        vols += "{:>53} Snapshots: {:>}\n".format(' ', v['snapshot_count'])
+
+                    # Self-heal information (if any)
+                    heal_header = heal_i = ''
+                    for heal_data in v['healinfo']:
+                        entries = 0 if heal_data['nr_entries'] == '-' else \
+                                  heal_data['nr_entries']
+                        if int(entries) > 0:
+                            heal_header = "{:>53} Self-Heal:\n".format(' ')
+                            heal_i += "{:>56} {:>} ({:>} File(s) to heal).\n".\
+                                         format(' ', heal_data['name'], entries)
+                    if heal_header:
+                        vols += heal_header
+                        vols += heal_i
 
                     # Snapshot information
+                    if v['snapshot_count'] > 0:
+                        vols += "{:>53} Snapshots: {:>}\n".format(' ', v['snapshot_count'])
                     if v['snapshot_count'] > 0 and (data.displaysnap or data.detail):
                         for snap in v['snapshots']:
                             vols += "{:>56} Name:   {}\n".format(' ', snap['name'])
