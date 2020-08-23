@@ -174,5 +174,6 @@ class Cluster(object):
 
     def _update_heal_info(self):
         for volume in self.volume_data:
-            volume['healinfo'] = heal.info(volume['name'])
+            if volume['status'].lower() == 'started':
+                volume['healinfo'] = heal.info(volume['name'])
 
