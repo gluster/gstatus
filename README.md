@@ -33,35 +33,32 @@ Install
 =======
 Download the latest release with the command
 
+```
 curl -LO https://github.com/gluster/gstatus/releases/download/v1.0.3/gstatus
-
-Make the gstatus binary executable.
-
 chmod +x ./gstatus
-
-Move the binary in to your PATH.
-
 sudo mv ./gstatus /usr/local/bin/gstatus
-
-Test to ensure the version you installed is up-to-date
-
 gstatus --version
+```
 
 Installating from source
 ========================
 * Installing glustercli-python
-  - git clone https://github.com/gluster/glustercli-python.git
-  - cd glustercli-python
-  - python3 setup.py install
+
+```
+git clone https://github.com/gluster/glustercli-python.git
+cd glustercli-python
+python3 setup.py install
+```
 
 Installing the gstatus tool:
-
 * Using python-setuptools
-  - git clone https://github.com/gluster/gstatus.git
-  - cd gstatus
-  - VERSION=1.0.3 make gen-version
-  - python3 setup.py install
 
+```
+git clone https://github.com/gluster/gstatus.git
+cd gstatus
+VERSION=1.0.3 make gen-version
+python3 setup.py install
+```
 
 Running the tool
 ================
