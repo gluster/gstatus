@@ -173,7 +173,13 @@ class Cluster(object):
                 volume['snapshots'] = snapshot.info(volname = volume['name'])
 
     def _update_heal_info(self):
+        heal_fail = 0
         for volume in self.volume_data:
             if volume['status'].lower() == 'started':
-                volume['healinfo'] = heal.info(volume['name'])
-
+                try:
+                    volume['healinfo'] = heal.info(volume['name'])
+                except GlusterCmdException:
+                    heal_fail = 1
+                    pass
+        if heal_fail:
+            print("Note: Unable to get self-heal status for one or more volumes")
