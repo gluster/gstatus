@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import os
+
 from optparse import OptionParser
 from distutils.version import LooseVersion as version
 from shutil import get_terminal_size
@@ -59,6 +61,10 @@ def parse_options():
 
 def main():
     options, args = parse_options()
+    # Are you root?
+    if os.getuid() != 0:
+        print("You have to be root or have sudo privileges to run this program.")
+        exit(1)
     cluster = Cluster(options, args)
     check_version(cluster)
     cluster.gather_data()
