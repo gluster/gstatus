@@ -6,7 +6,7 @@ import shutil
 
 from gstatus import version
 
-f = open('README')
+f = open('README.md')
 long_description = f.read().strip()
 f.close()
 
