@@ -34,7 +34,7 @@ Install
 Download the latest release with the command
 
 ```
-curl -LO https://github.com/gluster/gstatus/releases/download/v1.0.3/gstatus
+curl -LO https://github.com/gluster/gstatus/releases/download/v1.0.4/gstatus
 chmod +x ./gstatus
 sudo mv ./gstatus /usr/local/bin/gstatus
 gstatus --version
@@ -56,7 +56,7 @@ Installing the gstatus tool:
 ```
 git clone https://github.com/gluster/gstatus.git
 cd gstatus
-VERSION=1.0.3 make gen-version
+VERSION=1.0.4 make gen-version
 python3 setup.py install
 ```
 
