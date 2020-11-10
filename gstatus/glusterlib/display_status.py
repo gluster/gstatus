@@ -55,12 +55,13 @@ def _build_status(data):
 
                     # Self-heal information (if any)
                     heal_i = ''
-                    for heal_data in v['healinfo']:
-                        entries = 0 if heal_data['nr_entries'] == '-' else \
-                                  heal_data['nr_entries']
-                        if int(entries) > 0:
-                            heal_i += "{:>37} {:>} ({:>} File(s) to heal).\n".\
-                                      format(' ', heal_data['name'], entries)
+                    if (v.get('healinfo', 'not found') != 'not found'):
+                        for heal_data in v['healinfo']:
+                            entries = 0 if heal_data['nr_entries'] == '-' else \
+                                      heal_data['nr_entries']
+                            if int(entries) > 0:
+                                heal_i += "{:>37} {:>} ({:>} File(s) to heal).\n".\
+                                          format(' ', heal_data['name'], entries)
                     if heal_i:
                         vols += "{:>34} Self-Heal:\n".format(' ')
                         vols += heal_i
