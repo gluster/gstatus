@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 
 from optparse import OptionParser
 from distutils.version import LooseVersion as version
@@ -23,7 +24,8 @@ def check_version(cluster):
     """Check the gluster version, exit if less than 3.12"""
     if version(cluster.glusterfs_version) < version(supported_version):
         print("gstatus: GlusterFS %s is not supported, use GlusterFS %s "
-              "or above." %(glusterfs_version, supported_version))
+              "or above." %(glusterfs_version, supported_version),
+              file=sys.stderr)
         exit(1)
 
 def parse_options():
@@ -63,7 +65,8 @@ def main():
     options, args = parse_options()
     # Are you root?
     if os.getuid() != 0:
-        print("You have to be root or have sudo privileges to run this program.")
+        print("You have to be root or have sudo privileges to run this "
+              "program.", file=sys.stderr)
         exit(1)
     cluster = Cluster(options, args)
     check_version(cluster)
