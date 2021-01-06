@@ -1,4 +1,5 @@
 import re
+import sys
 
 from glustercli.cli import peer, quota, volume, snapshot, glusterfs_version, \
     heal
@@ -36,7 +37,7 @@ class Cluster(object):
                 self.volume_data = volume.status_detail(group_subvols=True)
         except GlusterCmdException as err:
             errcode, msg, u = err.args[0]
-            print(msg)
+            print(msg, file=sys.stderr)
             exit(errcode)
 
         self.nodes = len(peers)
@@ -117,13 +118,14 @@ class Cluster(object):
                     if re.fullmatch(pat, v):
                         matched_vols.append(v)
                 except Exception as err:
-                    print("Invalid regex: %s. Try .* instead of *"%(err))
+                    print("Invalid regex: %s. Try .* instead of *"%(err),
+                          file=sys.stderr)
                     exit(1)
         try:
             status = volume.status_detail(matched_vols, group_subvols=True)
         except GlusterCmdException as err:
             errcode, msg, u = err.args[0]
-            print(msg)
+            print(msg, file=sys.stderr)
             exit(errcode)
 
         return(status)
@@ -145,7 +147,8 @@ class Cluster(object):
             size /= units[self.unit]
             return("%.2f %siB"%(size, self.unit))
         else:
-            print("Unknown unit %s, allowed units k/m/g/t/p/h" %(self.unit))
+            print("Unknown unit %s, allowed units k/m/g/t/p/h" %(self.unit),
+                  file=sys.stderr)
             exit(1)
 
     def _update_quota_info(self):
@@ -182,4 +185,5 @@ class Cluster(object):
                     heal_fail = 1
                     pass
         if heal_fail:
-            print("Note: Unable to get self-heal status for one or more volumes")
+            print("Note: Unable to get self-heal status for one or more "
+                  "volumes", file=sys.stderr)
