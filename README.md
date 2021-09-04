@@ -67,6 +67,7 @@ NOTE: The tool has to be run as root or sudo <cmd>. This requirement is
       imposed by gluster than gstatus. Since gstatus internally calls the
       gluster command, running as superuser is a necessity.
 
+```
 root@master-node:~# gstatus -h
 Usage: gstatus [options]
 
@@ -84,7 +85,8 @@ Options:
                         Output mode, only json is supported currently. Default
                         is to print to console.
 root@master-node:~#
-
+```
+      
 Listing Volumes
 ---------------
 
