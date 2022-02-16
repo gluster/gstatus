@@ -12,12 +12,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: '3.x'
     - name: Build gstatus
       run: |
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make release
+        python -m pip install --upgrade pip
+        VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make release
     - name: Upload install.sh file
       uses: svenstaro/upload-release-action@v2
       with:
