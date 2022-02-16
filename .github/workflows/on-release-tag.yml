@@ -1,0 +1,36 @@
+name: "On Release"
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  publish-artifacts:
+    name: Publish gstatus and install script
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.x'
+    - name: Build gstatus
+      run: |
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make release
+    - name: Upload install.sh file
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: extras/install.sh
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: true
+    - name: Upload gstatus to the release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: build/gstatus
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: true
