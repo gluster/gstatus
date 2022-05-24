@@ -1,1 +1,1 @@
-glustercli==0.8.2
+glustercli==0.8.3
