@@ -4,7 +4,7 @@ import os
 import sys
 
 from optparse import OptionParser
-from distutils.version import LooseVersion as version
+from packaging.version import parse as version
 from shutil import get_terminal_size
 
 try:
